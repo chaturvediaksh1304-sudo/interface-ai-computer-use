@@ -36,6 +36,7 @@ from pydantic import ValidationError
 
 from agent.decide import Decision, DecisionError, decide
 from agent.discover import (
+    _locator_for,
     DiscoveryError,
     MaxStepsError,
     StuckError,
@@ -341,7 +342,28 @@ assert artifact.steps[1].locator.primary.strategy == "label"     # form control
 assert artifact.steps[2].locator.primary.strategy == "role"      # button
 assert artifact.steps[2].locator.primary.role == "button"
 assert artifact.steps[2].locator.primary.name == "Search"
-assert [f.strategy for f in artifact.steps[2].locator.fallbacks] == ["label", "text", "role"]
+assert [f.strategy for f in artifact.steps[2].locator.fallbacks] == ["label", "text"]
+
+# A click must not fall back to a bare position. Position matches whatever sits
+# at that index, so on an unexpected page it clicks the wrong thing -- and for a
+# state-changing action a wrong click is worse than a clean failure. Every
+# fallback on a click/fill/select must therefore carry a name to match on.
+for _step in artifact.steps:
+    if _step.action not in ("click", "fill", "select") or _step.locator is None:
+        continue
+    for _fb in _step.locator.fallbacks:
+        assert _fb.name, (
+            f"step {_step.index} ({_step.action}) has a nameless fallback "
+            f"{_fb.strategy!r} that could match the wrong element"
+        )
+# Where a node genuinely had no name, position is the PRIMARY and must survive:
+# there it is what discovery recorded, not a guess made after better locators
+# missed. Losing it would make unnamed form fields unfillable.
+_entry = {"node": {"role": "textbox", "name": None}, "name_nth": 0, "role_nth": 2,
+          "ambiguous": False, "prefix_nth": None, "action": {"action": "fill"}}
+_built = _locator_for(_entry)
+assert _built.primary.strategy == "role" and _built.primary.nth == 2, _built.primary
+assert _built.fallbacks == [], _built.fallbacks
 assert all(s.locator is None or s.locator.primary.strategy != "css" for s in artifact.steps)
 
 print(f"PASS (c) no ref leaked into the artifact; {len(session.issued_refs)} refs were reissued across snapshots")

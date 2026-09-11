@@ -15,7 +15,7 @@
       }
     }
   },
-  "created_at": "2026-09-11T21:29:59.331976Z",
+  "created_at": "2026-09-11T23:13:53.187799Z",
   "goal": "Sign in with the given username and password using the login form. You then land on the account summary page. It has a dropdown of account numbers with a button named exactly 'GO' beside it -- that is the one to use, NOT the site search button named 'Go'. Select the account_number value in the dropdown, click the 'GO' button, then read the available balance from the resulting Balance Detail page. Say done once you have read the balance.",
   "inputs": [
     {
@@ -61,23 +61,6 @@
     {
       "description": "Read at step 8 from the cell labelled '-$2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.00'. Kept as a string: the artifact returns what the screen said, and interpreting it is the caller's decision.",
       "from_step": 8,
-      "locator": {
-        "fallbacks": [],
-        "primary": {
-          "exact": false,
-          "name": null,
-          "nth": 11,
-          "role": "cell",
-          "selector": null,
-          "strategy": "role"
-        }
-      },
-      "name": "ending_balance_as_of",
-      "type": "string"
-    },
-    {
-      "description": "Read at step 9 from the cell labelled '-$2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.00'. Kept as a string: the artifact returns what the screen said, and interpreting it is the caller's decision.",
-      "from_step": 9,
       "locator": {
         "fallbacks": [],
         "primary": {
@@ -160,14 +143,6 @@
             "role": null,
             "selector": null,
             "strategy": "text"
-          },
-          {
-            "exact": false,
-            "name": null,
-            "nth": 1,
-            "role": "button",
-            "selector": null,
-            "strategy": "role"
           }
         ],
         "primary": {
@@ -203,14 +178,6 @@
             "role": null,
             "selector": null,
             "strategy": "text"
-          },
-          {
-            "exact": false,
-            "name": null,
-            "nth": 1,
-            "role": "button",
-            "selector": null,
-            "strategy": "role"
           }
         ],
         "primary": {
@@ -227,7 +194,7 @@
     },
     {
       "action": "select",
-      "description": "Select the account number dropdown and choose the specified account number to proceed.",
+      "description": "Select the account number 800002 from the dropdown to proceed to the account summary page.",
       "index": 5,
       "locator": {
         "fallbacks": [],
@@ -264,14 +231,6 @@
             "role": null,
             "selector": null,
             "strategy": "text"
-          },
-          {
-            "exact": false,
-            "name": null,
-            "nth": 1,
-            "role": "button",
-            "selector": null,
-            "strategy": "role"
           }
         ],
         "primary": {
@@ -288,7 +247,7 @@
     },
     {
       "action": "read",
-      "description": "The available balance is displayed in the cell with the ref 'f5e71', so reading it will provide the required value.",
+      "description": "Read the available balance from the current page as it is the final step before marking the task as done.",
       "index": 7,
       "locator": {
         "fallbacks": [],
@@ -306,26 +265,8 @@
     },
     {
       "action": "read",
-      "description": "The available balance is listed under the 'Available balance' row, so read this value to complete the goal.",
-      "index": 8,
-      "locator": {
-        "fallbacks": [],
-        "primary": {
-          "exact": false,
-          "name": null,
-          "nth": 11,
-          "role": "cell",
-          "selector": null,
-          "strategy": "role"
-        }
-      },
-      "url": null,
-      "value": null
-    },
-    {
-      "action": "read",
       "description": "The goal requires reading the available balance, which is listed under the 'Available balance' row.",
-      "index": 9,
+      "index": 8,
       "locator": {
         "fallbacks": [],
         "primary": {

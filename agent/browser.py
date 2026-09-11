@@ -65,7 +65,9 @@ DEFAULT_TIMEOUT_MS = 10_000
 CANDIDATE_TIMEOUT_MS = 2_000
 # The primary locator is what discovery recorded, so it is given longer than a
 # fallback. Still bounded: worst case is this plus one short wait per fallback.
-PRIMARY_TIMEOUT_MS = 6_000
+PRIMARY_TIMEOUT_MS = 10_000  # the sandbox is a public demo host and is sometimes slow;
+# with two named fallbacks at 2s each the worst case is still bounded well under the
+# limit check_browser asserts.
 
 # A ref that passed the staleness check but whose element has since left the page fails
 # here. Short, because the answer is already known -- waiting 10s to be told an element

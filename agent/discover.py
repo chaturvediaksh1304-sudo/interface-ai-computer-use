@@ -244,9 +244,23 @@ def _locator_for(entry: dict) -> Locator:
     by_text = A11yLocator(strategy="text", name=name, exact=True, nth=name_nth)
     by_position = A11yLocator(strategy="role", role=role or "generic", nth=entry["role_nth"])
 
+    # A positional fallback matches whatever happens to sit at that index, so on
+    # a page that is not the one we recorded it silently hits the wrong element.
+    # For an action that changes state -- a click, a fill, a select -- that is
+    # worse than failing: a wrong click submits a wrong form. When the named
+    # locators above have all missed, the page is not what this capability was
+    # built against, and stopping is the honest outcome.
+    #
+    # This only removes position as a LAST RESORT. Where a node had no
+    # accessible name at all, position is the primary above and stays: there it
+    # is what discovery actually recorded, not a guess made after better
+    # locators failed.
+    changes_state = entry["action"]["action"] in ("click", "fill", "select")
+    tail = [] if changes_state else [by_position]
+
     if role in _FORM_ROLES:
-        return Locator(primary=by_label, fallbacks=[by_role, by_text, by_position])
-    return Locator(primary=by_role, fallbacks=[by_label, by_text, by_position])
+        return Locator(primary=by_label, fallbacks=[by_role, by_text, *tail])
+    return Locator(primary=by_role, fallbacks=[by_label, by_text, *tail])
 
 
 def _step_for(entry: dict) -> Step:

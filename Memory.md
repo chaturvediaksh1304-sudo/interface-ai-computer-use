@@ -131,12 +131,14 @@ allowlist. Two things are waiting on a decision:
 
 ## Known issues, not yet fixed
 
-- **Positional fallbacks can match the wrong element.** A `role=button, nth=N` fallback matches
-  whatever button sits at that index, so on an unexpected page it silently clicks something
-  else. This caused the nondeterminism above: the primary lost a timing race and a positional
-  fallback won instantly with the wrong element. Mitigated by giving the primary a longer
-  budget (6s vs 2s), but not removed. For interactive steps a wrong click is worse than a clean
-  failure, so these fallbacks should probably be dropped for click/fill/select.
+- **Replay of this capability is intermittent, but it fails honestly.** Roughly one run in five
+  the sandbox does not complete the login click and the browser stays on `login.jsp`; the
+  account page never appears, so there is genuinely no GO button and replay returns a
+  HARD_FAILURE at step 4 with a screenshot. That is the correct classification for the state
+  the page is actually in, and it is environmental rather than a locator defect — but it does
+  mean the capability is not reliable end-to-end against this host. A bounded retry of the
+  login step would be the obvious next move; the taxonomy already has RECOVERABLE for exactly
+  this shape of condition, and today nothing uses it for a navigation that silently no-ops.
 - **Duplicate outputs.** In the current artifact `cell` and `available_balance` both resolve to
   the same cell (`nth=13`), because the model read it once directly and once via a label the
   retargeting then followed to the same place. Harmless but untidy; the compiler does not
