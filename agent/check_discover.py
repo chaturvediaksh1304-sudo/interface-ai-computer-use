@@ -494,3 +494,46 @@ assert _stable_part("Available balance") == "Available balance"
 
 print("PASS (g) value-shaped accessible names are rejected as locator anchors, "
       "short real labels are kept, and volatile suffixes are trimmed")
+
+
+# --------------------------------------------------------------------------
+# (h) a filled value must never reach the log
+# --------------------------------------------------------------------------
+import pathlib  # noqa: E402
+
+from agent.discover import _loggable  # noqa: E402
+
+SECRET = "hunter2-not-a-real-password"
+scrubbed = _loggable({"action": "fill", "ref": "e4", "value": SECRET})
+assert SECRET not in json.dumps(scrubbed), f"the value survived scrubbing: {scrubbed}"
+assert scrubbed["value"] == f"<{len(SECRET)} chars>", scrubbed
+assert scrubbed["ref"] == "e4" and scrubbed["action"] == "fill", "scrubbing lost the rest"
+# Actions with nothing to hide are passed through untouched.
+assert _loggable({"action": "click", "ref": "e9"}) == {"action": "click", "ref": "e9"}
+assert _loggable({"action": "navigate", "url": "http://x/y"})["url"] == "http://x/y"
+
+# The guarantee that matters is behavioural, not textual: run a discovery whose
+# input is a secret, through the REAL logger into a real file, and assert the
+# secret is absent from the bytes on disk. A bare password has no shape any
+# redaction pattern can match, so keeping it out at the point of writing is the
+# only thing between a real credential and the evidence file.
+import tempfile as _tempfile  # noqa: E402
+
+from guardrails.logging_setup import setup_logging as _setup_logging  # noqa: E402
+
+_SECRET = "swordfish-not-a-real-password"
+_leak_script = [dict(e) for e in SCRIPT]
+_leak_script[0] = {"action": {"action": "fill", "ref": "@Member ID", "value": _SECRET},
+                   "rationale": "Type the credential into the field."}
+with _tempfile.TemporaryDirectory() as _tmp:
+    _log = _setup_logging("check-leak", evidence_dir=_tmp)
+    with contextlib.redirect_stdout(io.StringIO()):
+        discover(GOAL, TARGET, client=FakeClient(_leak_script),
+                 session=FakeSession(PAGES, transitions=[1, 1, 2, 2], fail_acts={3}),
+                 logger=_log, run_inputs={"account_password": _SECRET},
+                 capability_id="altoro.leakcheck")
+    _written = pathlib.Path(_tmp, "check-leak.jsonl").read_text(encoding="utf-8")
+assert _SECRET not in _written, "the filled value reached the log file"
+assert '"<29 chars>"' in _written, "the value's length should be logged in its place"
+
+print("PASS (h) a filled value never reaches the log file; only its length is recorded")

@@ -385,6 +385,21 @@ class UnknownRefError(DiscoveryError):
     """
 
 
+def _loggable(action: dict) -> dict:
+    """An action safe to write to a log: its value replaced by a description.
+
+    A filled value may be a password, and a bare password has no shape any
+    redaction pattern can recognise, so it has to be kept out of the log at the
+    point of writing rather than caught downstream. The length and the parameter
+    name are enough to debug with; the value itself never is.
+    """
+    if "value" not in action or action["value"] is None:
+        return action
+    safe = dict(action)
+    safe["value"] = f"<{len(str(action['value']))} chars>"
+    return safe
+
+
 def _index_node(observation, ref: str, step_index: int) -> tuple[dict, int, int, bool]:
     """Find the node a ref points at, plus the positional facts the compiler needs.
 
@@ -539,7 +554,7 @@ def discover(
                 logger.warning(
                     "dropping the step that led to the error page",
                     extra={"phase": "discover", "dropped_step": dead_end["index"],
-                           "dropped_action": dead_end["action"]},
+                           "dropped_action": _loggable(dead_end["action"])},
                 )
 
             recovery = session.act({"action": "navigate", "url": last_good_url})
@@ -562,7 +577,8 @@ def discover(
         logger.info(
             "decision",
             extra={"phase": "discover", "attempt": attempt, "step": step_index,
-                   "action": action, "rationale": decision.rationale, "url": observation.url},
+                   "action": _loggable(action), "rationale": decision.rationale,
+                   "url": observation.url},
         )
 
         if verb == "stuck":
@@ -618,8 +634,8 @@ def discover(
             # reacts to a block, never whether the block happens.
             logger.warning(
                 "action blocked by allowlist, feeding back to model",
-                extra={"phase": "discover", "attempt": attempt, "action": action,
-                       "reason": str(exc)},
+                extra={"phase": "discover", "attempt": attempt,
+                       "action": _loggable(action), "reason": str(exc)},
             )
             history.append({"index": attempt, "action": action, "ok": False,
                             "detail": f"BLOCKED by allowlist: {exc}"})
@@ -630,8 +646,8 @@ def discover(
             # earns its keep, so hand the failure back and let it re-plan.
             logger.warning(
                 "action failed, feeding back to model",
-                extra={"phase": "discover", "attempt": attempt, "action": action,
-                       "detail": result.detail},
+                extra={"phase": "discover", "attempt": attempt,
+                       "action": _loggable(action), "detail": result.detail},
             )
             history.append({"index": attempt, "action": action, "ok": False, "detail": result.detail})
             continue
