@@ -2,7 +2,8 @@
 
 Live state of the project. Updated after every phase.
 
-**Last updated:** 2026-09-11 — Phases 3 and 4 complete; outputs now return values rather than labels. A live LLM-driven discovery run produces
+**Last updated:** 2026-09-11 — Phase 6 complete. Phases 1-6 all meet their done-criteria; only
+Phase 7 (docs + final evidence package) remains. A live LLM-driven discovery run produces
 an artifact that replays deterministically three times running, with no model in the replay path.
 Phases 1-2 committed (`2773bca`, `2462511`); Phases 3-4 are **uncommitted**. No remote exists.
 
@@ -49,6 +50,17 @@ selected an account, read the balance — and compiled into a schema-valid artif
 done-criteria pass against the Phase 2 example artifact: clean 8-step replay returning two
 typed outputs, identical on re-run, bad input classified as a business outcome rather than a
 crash, fallback recovery reported, exhausted fallbacks hard-failing with a screenshot on disk.
+
+**Phase 5 — Evidence/logging.** Verified rather than newly built: discovery and replay runs each
+produce a complete structured log under `/evidence/` (66/57/40 well-formed records, none
+unparseable), and the error-case replay's result record points at a real screenshot.
+
+**Phase 6 — Human escalation and handoff.** `escalation/intervention.py` raises an
+`InterventionRequest` carrying goal, step, state and reason plus a screenshot, and
+`apply_operator_commands` runs a human's commands through the *same* live `BrowserSession`.
+`operator/console.html` is the mock operator surface. Demonstrated live against the sandbox: the
+agent stopped for want of credentials, a human signed in through the held session, and automation
+resumed on the page the human left it on (`login.jsp` -> `/bank/main.jsp`, same session object).
 
 ## In progress
 
@@ -130,6 +142,12 @@ allowlist. Two things are waiting on a decision:
    If Phase 3 picks a different sandbox, widening the allowlist needs approval.
 
 ## Known issues, not yet fixed
+
+- **`param_names` was empty in the live Phase 6 demo.** It is derived from the accessible names of
+  the page's input controls, and this app's login inputs have none, so the console had no
+  parameter names to render for that request. Harmless, but it means the field is only as good as
+  the page's accessibility markup; deriving it from the artifact's declared inputs would be
+  sturdier when a capability is in play.
 
 - **Replay of this capability is intermittent, but it fails honestly.** Roughly one run in five
   the sandbox does not complete the login click and the browser stays on `login.jsp`; the

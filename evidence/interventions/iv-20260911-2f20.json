@@ -1,0 +1,17 @@
+{
+  "request_id": "iv-20260911-2f20",
+  "raised_at": "2026-09-11T23:57:31.610966+00:00",
+  "goal": "transfer 100 from checking to savings",
+  "capability_id": "altoro.transfer_funds",
+  "step_index": 7,
+  "reason": "the page asks for a one-time transaction password the agent does not have",
+  "url": "https://demo.testfire.net/bank/transfer.jsp",
+  "page_title": "Altoro Mutual: Transfer Funds",
+  "observation_digest": "Transfer Funds. This account requires a one-time transaction password to continue.",
+  "screenshot": "evidence/interventions/iv-20260911-2f20.png",
+  "param_names": [
+    "From Account",
+    "Amount",
+    "Transaction Password"
+  ]
+}
