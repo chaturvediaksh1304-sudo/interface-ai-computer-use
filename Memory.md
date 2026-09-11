@@ -2,8 +2,9 @@
 
 Live state of the project. Updated after every phase.
 
-**Last updated:** 2026-09-11 — Phase 2 (artifact schema) complete and verified. Phases 1 and 2
-are committed locally (`2773bca`, `2462511`). No remote exists; nothing has been pushed.
+**Last updated:** 2026-09-11 — Phases 3 and 4 complete. A live LLM-driven discovery run produces
+an artifact that replays deterministically three times running, with no model in the replay path.
+Phases 1-2 committed (`2773bca`, `2462511`); Phases 3-4 are **uncommitted**. No remote exists.
 
 ---
 
@@ -38,10 +39,27 @@ the subagents' word.
 - Mutation-tested: neutering rules 1, 2, 3 and 6 in turn each made the check fail, so it has
   teeth. `schema.py` restored byte-identical afterwards.
 
+**Phase 3 — Discovery loop.** Built: `agent/browser.py` (a11y observe + act), `agent/decide.py`
+(the LLM call), `agent/discover.py` (loop + artifact compiler), `agent/llm.py` (backend adapter).
+A genuine LLM-driven run against the live sandbox completed the goal end-to-end — logged in,
+selected an account, read the balance — and compiled into a schema-valid artifact at
+`artifacts/altoro.account_balance.v1.json`. Both stated done-criteria are literally met.
+
+**Phase 4 — Replay + error taxonomy.** Built: `replay/outcomes.py`, `replay/engine.py`. Both
+done-criteria pass against the Phase 2 example artifact: clean 8-step replay returning two
+typed outputs, identical on re-run, bad input classified as a business outcome rather than a
+crash, fallback recovery reported, exhausted fallbacks hard-failing with a screenshot on disk.
+
 ## In progress
 
-Nothing. Stopped at the Phase 2 gate, pending confirmation to start Phase 3 (discovery loop) —
-which needs live-browser approval that has not been given.
+Nothing in flight. Phases 3 and 4 both meet their stated done-criteria:
+
+- A genuine LLM-driven run (local qwen2.5:14b via Ollama) signs in to the live sandbox, selects
+  an account, reads the balance, and compiles to a schema-valid artifact.
+- That artifact replays with no LLM anywhere, returning its declared outputs, and gave an
+  identical result on three consecutive runs.
+- A deliberately bad input is classified as a HARD_FAILURE at step 5 with expected/observed and
+  a screenshot at `evidence/replay_altoro.png` — a structured result, not a crash.
 
 ## Key decisions + why
 
@@ -111,9 +129,31 @@ allowlist. Two things are waiting on a decision:
    IBM-maintained deliberately-vulnerable sandbox bank app, no login required) plus localhost.
    If Phase 3 picks a different sandbox, widening the allowlist needs approval.
 
+## Known issues, not yet fixed
+
+- **Positional fallbacks can match the wrong element.** A `role=button, nth=N` fallback matches
+  whatever button sits at that index, so on an unexpected page it silently clicks something
+  else. This caused the nondeterminism above: the primary lost a timing race and a positional
+  fallback won instantly with the wrong element. Mitigated by giving the primary a longer
+  budget (6s vs 2s), but not removed. For interactive steps a wrong click is worse than a clean
+  failure, so these fallbacks should probably be dropped for click/fill/select.
+- **Two of three outputs return label text, not values** (`available_balance` reads back
+  "Available balance"). The model chose to read label cells; nothing in the compiler notices
+  that an output is a label rather than a datum.
+- **`BUSINESS_SIGNALS` is still the 8 generic phrases** written before the real UI was known.
+  It should be replaced with Altoro's actual empty-state wording.
+- The example artifact from Phase 2 still describes a member-search flow that was guessed, not
+  observed. It validates and replays in tests, but it is not a real capability.
+
 ## Next
 
-Phase 3 — Claude-driven discovery loop: observe (a11y tree) → decide → act (Playwright) against
+Phase 5 (evidence/logging) is largely satisfied already by work done in passing — structured
+logs exist for every discovery and replay run and a screenshot is captured on failure; it needs
+a review pass against its criteria rather than new building. Phase 6 (human escalation) is
+untouched, and `StuckError` already carries the goal/step/url/reason payload an intervention
+request needs.
+
+Superseded plan — Phase 3 — Claude-driven discovery loop: observe (a11y tree) → decide → act (Playwright) against
 the sandbox, completing one real multi-step goal and compiling the transcript into a valid
 `CapabilityArtifact`. Done-criteria: one genuine LLM-driven run end-to-end against a live
 sandbox, and a transcript that compiles to a valid artifact.
