@@ -1,0 +1,4 @@
+# Pinned at the phase that first needs them. Phase 1 (guardrails) is stdlib-only.
+playwright>=1.48
+pydantic>=2.9
+anthropic>=0.40

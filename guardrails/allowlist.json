@@ -1,0 +1,8 @@
+{
+  "_comment": "Deny-by-default allowlist. Anything not listed here is blocked.",
+  "allowed_domains": ["demo.testfire.net", "localhost", "127.0.0.1"],
+  "allow_subdomains": false,
+  "allowed_schemes": ["http", "https"],
+  "allowed_path_patterns": ["/", "/index.jsp", "/login.jsp", "/bank/*"],
+  "allowed_actions": ["navigate", "click", "fill", "select", "read"]
+}
