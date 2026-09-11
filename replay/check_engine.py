@@ -399,6 +399,8 @@ def main() -> None:
     assert result_h2.outcome is Outcome.HARD_FAILURE, result_h2
     assert len(stuck.calls) == 1 + RETRY_LIMIT + 1, stuck.calls
 
+    check_renavigation(valid, good, evidence)
+
     print(
         f"PASS: replay engine self-check - 8-step Phase 2 example artifact replays clean "
         f"against local markup returning {len(EXPECTED_OUTPUTS)} typed outputs and identically "
@@ -409,6 +411,78 @@ def main() -> None:
         f"stale-element retried {RETRY_LIMIT}x then escalated; no anthropic/openai module "
         f"reachable from the replay path"
     )
+
+
+
+# --------------------------------------------------------------------------
+# (i) a click that silently does not navigate is re-run once, bounded
+# --------------------------------------------------------------------------
+class NoOpClickSession(StubSession):
+    """A session where a click only takes effect when it is repeated.
+
+    This is the failure being guarded against: the click is found and reported
+    successful, but the page does not move, so the step after it looks for
+    something that only exists on the page never reached. Repeating the same
+    click is what makes it land -- exactly what the engine's recovery does.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.last_click = None
+        self.repeated_clicks = 0
+        self.navigated = False
+
+    def act(self, action: dict) -> ActResult:
+        self.calls.append(action)
+        obs = Observation(self.url, "stub", [], "")
+        kind = action["action"]
+        if kind == "navigate":
+            return ActResult(True, action, f"navigated to {action['url']}", obs)
+        if kind in ("fill", "select"):
+            return ActResult(True, action, "matched primary role='textbox'", obs)
+        if kind == "click":
+            signature = json.dumps(action, sort_keys=True)
+            if signature == self.last_click:
+                self.repeated_clicks += 1
+                self.navigated = True          # the repeat is what lands
+            else:
+                self.navigated = False         # a fresh click silently no-ops
+            self.last_click = signature
+            return ActResult(True, action, "matched primary role='button' name='Login'", obs)
+        if not self.navigated:
+            return ActResult(False, action, "no locator matched; tried primary role='cell'", obs)
+        return ActResult(True, action, "matched primary role='cell'", obs)
+
+
+def check_renavigation(artifact, params, evidence_dir) -> None:
+    session = NoOpClickSession()
+    result, log = run(artifact, params, session, evidence_dir, "case_renav")
+
+    # The count that matters is the REPEAT, not the total: the artifact has
+    # several click steps of its own, so a plain click count would pass without
+    # the recovery ever running.
+    assert session.repeated_clicks >= 1, (
+        "the click that failed to navigate was never re-run "
+        f"(clicks={len(session.calls)}, repeats={session.repeated_clicks})"
+    )
+    assert log.events("replay.renavigating"), \
+        "the re-navigation was not logged; a recovery must never be silent"
+
+    # Bounded: a click that NEVER takes must still stop rather than loop.
+    class NeverNavigates(NoOpClickSession):
+        """Even the repeat does not land, so the run must stop, not loop."""
+
+        def act(self, action):
+            out = super().act(action)
+            self.navigated = False
+            return out
+
+    stuck = NeverNavigates()
+    verdict, _ = run(artifact, params, stuck, evidence_dir, "case_renav_bound")
+    assert verdict.outcome is Outcome.HARD_FAILURE, verdict
+    assert len(stuck.calls) < 40, f"re-navigation looped: {len(stuck.calls)} actions"
+    print("PASS (i) a click that did not navigate is re-run once and the run recovers; "
+          "a click that never navigates still stops, bounded and logged")
 
 
 if __name__ == "__main__":

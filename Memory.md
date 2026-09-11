@@ -136,9 +136,14 @@ allowlist. Two things are waiting on a decision:
   account page never appears, so there is genuinely no GO button and replay returns a
   HARD_FAILURE at step 4 with a screenshot. That is the correct classification for the state
   the page is actually in, and it is environmental rather than a locator defect — but it does
-  mean the capability is not reliable end-to-end against this host. A bounded retry of the
-  login step would be the obvious next move; the taxonomy already has RECOVERABLE for exactly
-  this shape of condition, and today nothing uses it for a navigation that silently no-ops.
+  mean the capability is not reliable end-to-end against this host.
+
+  A bounded recovery now exists for it: when a locator goes missing immediately after a click
+  that left the page where it was, the engine re-runs that click once and retries the step,
+  counted against the taxonomy's existing retry ledger so it cannot loop. It is proven by
+  `replay.check_engine` check (i) against a session whose clicks only land when repeated.
+  **It has not yet been seen to fire against the live site** — six consecutive live runs all
+  passed without the flaky condition occurring, so there is no live evidence either way.
 - **Duplicate outputs.** In the current artifact `cell` and `available_balance` both resolve to
   the same cell (`nth=13`), because the model read it once directly and once via a label the
   retargeting then followed to the same place. Harmless but untidy; the compiler does not

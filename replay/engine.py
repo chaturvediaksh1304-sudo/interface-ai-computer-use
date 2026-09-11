@@ -193,9 +193,60 @@ class _RunState:
         self.drift: list[str] = []  # steps that only matched via a fallback
 
 
+def _renavigate_and_retry(state: _RunState, step, prior, params: dict):
+    """Re-run the click before this step, then try this step once more.
+
+    A click that starts a navigation can silently do nothing -- the element is
+    found and clicked, the click reports success, and the page never moves. The
+    next step then looks for something that only exists on the page we should
+    have arrived at, fails to find it, and the run stops on a locator error that
+    describes a symptom rather than the cause.
+
+    This is the RECOVERABLE shape the taxonomy already names: transient, worth a
+    bounded retry, and logged rather than silently absorbed. The bound is the
+    shared retry ledger, so this cannot loop -- ``classify`` stops granting
+    retries for a (step, condition) pair once the budget is spent.
+
+    Returns the successful ActResult for ``step``, or None to let the original
+    verdict stand.
+    """
+    verdict = classify(
+        Condition.SLOW_LOAD,
+        step_index=step.index,
+        expected=step.description,
+        observed=f"still on {state.session.url!r}; the click at step {prior.index} did not navigate",
+        capability_id=state.artifact.capability_id,
+        retries=state.retries,
+    )
+    if verdict.outcome is not Outcome.RECOVERABLE:
+        return None
+
+    state.logger.warning(
+        "replay.renavigating",
+        extra={
+            "step_index": step.index,
+            "reason": f"step {prior.index} clicked but the page did not move",
+            "url": state.session.url,
+        },
+    )
+
+    repeat = state.session.act(_action_for(prior, params))
+    if not repeat.ok:
+        return None
+    if repeat.observation is not None:
+        state.observation = repeat.observation
+
+    retry = state.session.act(_action_for(step, params))
+    if retry.observation is not None:
+        state.observation = retry.observation
+    return retry if retry.ok else None
+
+
 def _run(state: _RunState, params: dict) -> ReplayResult:
     """The linear body: steps, then checkpoint, then outputs."""
     reads: dict[int, str] = {}
+
+    previous = None
 
     for step in state.artifact.steps:
         skipped = _skip_reason(step, params)
@@ -206,9 +257,27 @@ def _run(state: _RunState, params: dict) -> ReplayResult:
             )
             continue
 
+        url_before = state.session.url
         result, verdict = _execute(state, step, params)
+
+        # A locator that is missing right after a click which left the page where
+        # it was usually means the click did not take, not that the element is
+        # gone. Re-run that click once and try again before giving up.
+        if (
+            verdict is not None
+            and verdict.outcome is Outcome.HARD_FAILURE
+            and "no locator matched" in (verdict.observed or "")
+            and previous is not None
+            and previous.action == "click"
+            and state.session.url == url_before
+        ):
+            recovered = _renavigate_and_retry(state, step, previous, params)
+            if recovered is not None:
+                result, verdict = recovered, None
+
         if verdict is not None:
             return _finish(state, verdict)
+        previous = step
         if step.action == "read":
             # For a read, ActResult.detail *is* the text that was read.
             reads[step.index] = result.detail
