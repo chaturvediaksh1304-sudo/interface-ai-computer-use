@@ -1,0 +1,222 @@
+{
+  "schema_version": "1.0",
+  "capability_id": "altoro.member_account_lookup",
+  "version": 1,
+  "goal": "Look up a member by member ID in the back-office console, open that member's account detail view, and read back the account holder name and the available balance.",
+  "target": "https://demo.testfire.net",
+  "created_at": "2026-09-11T14:02:11Z",
+  "inputs": [
+    {
+      "name": "member_id",
+      "type": "string",
+      "required": true,
+      "description": "Back-office member/customer identifier as printed on the account record, e.g. 800000. Typed into the Member ID field of the search form.",
+      "secret": false
+    },
+    {
+      "name": "account_type",
+      "type": "string",
+      "required": false,
+      "description": "Narrows the search to one product family. One of Checking, Savings, or All. Omit to leave the form's own default selection in place.",
+      "secret": false
+    }
+  ],
+  "outputs": [
+    {
+      "name": "account_holder",
+      "type": "string",
+      "description": "Full name of the member as shown on the account detail view. Used by the caller to confirm the right record was opened.",
+      "from_step": 6,
+      "locator": {
+        "primary": {
+          "strategy": "label",
+          "name": "Account holder"
+        },
+        "fallbacks": [
+          {
+            "strategy": "css",
+            "selector": "#memberDetail .account-holder"
+          }
+        ]
+      }
+    },
+    {
+      "name": "available_balance",
+      "type": "string",
+      "description": "Available balance exactly as the UI formats it, e.g. \"$1,234.56\". Kept as a string rather than a number: the currency symbol, thousands separator and any parenthesised negative are part of what the screen actually said, and parsing them is the caller's decision, not ours.",
+      "from_step": 7,
+      "locator": {
+        "primary": {
+          "strategy": "label",
+          "name": "Available Balance"
+        },
+        "fallbacks": [
+          {
+            "strategy": "css",
+            "selector": "#memberDetail .available-balance"
+          }
+        ]
+      }
+    }
+  ],
+  "steps": [
+    {
+      "index": 0,
+      "action": "navigate",
+      "description": "Open the back-office landing page. This is the only allowlisted entry point for the capability.",
+      "url": "https://demo.testfire.net/bank/main.jsp"
+    },
+    {
+      "index": 1,
+      "action": "click",
+      "description": "Follow the Member Search link out of the main menu into the search form.",
+      "locator": {
+        "primary": {
+          "strategy": "role",
+          "role": "link",
+          "name": "Member Search",
+          "exact": true
+        },
+        "fallbacks": [
+          {
+            "strategy": "text",
+            "name": "Member Search"
+          },
+          {
+            "strategy": "css",
+            "selector": "a[href*='member']"
+          }
+        ]
+      }
+    },
+    {
+      "index": 2,
+      "action": "fill",
+      "description": "Type the member id into the Member ID field.",
+      "locator": {
+        "primary": {
+          "strategy": "label",
+          "name": "Member ID"
+        },
+        "fallbacks": [
+          {
+            "strategy": "placeholder",
+            "name": "Member ID"
+          },
+          {
+            "strategy": "css",
+            "selector": "input[name='memberId']"
+          }
+        ]
+      },
+      "value": "{{member_id}}"
+    },
+    {
+      "index": 3,
+      "action": "select",
+      "description": "Narrow the search to one product family so a member holding several accounts still yields a single result row.",
+      "locator": {
+        "primary": {
+          "strategy": "label",
+          "name": "Account type"
+        },
+        "fallbacks": [
+          {
+            "strategy": "css",
+            "selector": "select[name='acctType']"
+          }
+        ]
+      },
+      "value": "{{account_type}}"
+    },
+    {
+      "index": 4,
+      "action": "click",
+      "description": "Submit the search form.",
+      "locator": {
+        "primary": {
+          "strategy": "role",
+          "role": "button",
+          "name": "Search",
+          "exact": true
+        },
+        "fallbacks": [
+          {
+            "strategy": "css",
+            "selector": "input[type='submit'][value='Search']"
+          }
+        ]
+      }
+    },
+    {
+      "index": 5,
+      "action": "click",
+      "description": "Open the first row of the results table, which is the matched member's detail view. Pinned to nth=0 on purpose: an empty result set must fail here as a missing locator rather than silently reading whatever else is on the page.",
+      "locator": {
+        "primary": {
+          "strategy": "role",
+          "role": "link",
+          "name": "View detail",
+          "nth": 0
+        },
+        "fallbacks": [
+          {
+            "strategy": "css",
+            "selector": "table#searchResults tbody tr:first-child a"
+          }
+        ]
+      }
+    },
+    {
+      "index": 6,
+      "action": "read",
+      "description": "Read the account holder name off the detail view.",
+      "locator": {
+        "primary": {
+          "strategy": "label",
+          "name": "Account holder"
+        },
+        "fallbacks": [
+          {
+            "strategy": "css",
+            "selector": "#memberDetail .account-holder"
+          }
+        ]
+      }
+    },
+    {
+      "index": 7,
+      "action": "read",
+      "description": "Read the available balance off the detail view.",
+      "locator": {
+        "primary": {
+          "strategy": "label",
+          "name": "Available Balance"
+        },
+        "fallbacks": [
+          {
+            "strategy": "css",
+            "selector": "#memberDetail .available-balance"
+          }
+        ]
+      }
+    }
+  ],
+  "checkpoint": {
+    "kind": "text_present",
+    "expected": "Available Balance",
+    "locator": {
+      "primary": {
+        "strategy": "role",
+        "role": "region",
+        "name": "Member Detail"
+      },
+      "fallbacks": [
+        {
+          "strategy": "css",
+          "selector": "#memberDetail"
+        }
+      ]
+    }
+  }
+}
