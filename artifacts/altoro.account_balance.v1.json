@@ -1,0 +1,455 @@
+{
+  "capability_id": "altoro.account_balance",
+  "checkpoint": {
+    "expected": "Available balance",
+    "kind": "a11y_node_present",
+    "locator": {
+      "fallbacks": [
+        {
+          "exact": true,
+          "name": "Available balance",
+          "nth": null,
+          "role": null,
+          "selector": null,
+          "strategy": "label"
+        },
+        {
+          "exact": true,
+          "name": "Available balance",
+          "nth": null,
+          "role": null,
+          "selector": null,
+          "strategy": "text"
+        },
+        {
+          "exact": false,
+          "name": null,
+          "nth": 12,
+          "role": "cell",
+          "selector": null,
+          "strategy": "role"
+        }
+      ],
+      "primary": {
+        "exact": true,
+        "name": "Available balance",
+        "nth": null,
+        "role": "cell",
+        "selector": null,
+        "strategy": "role"
+      }
+    }
+  },
+  "created_at": "2026-09-11T20:10:34.793640Z",
+  "goal": "Sign in with the given username and password using the login form. You then land on the account summary page. It has a dropdown of account numbers with a button named exactly 'GO' beside it -- that is the one to use, NOT the site search button named 'Go'. Select the account_number value in the dropdown, click the 'GO' button, then read the available balance from the resulting Balance Detail page. Say done once you have read the balance.",
+  "inputs": [
+    {
+      "description": "Supplied by the caller at discovery time and templated into step 1, where it is filled into 'textbox'.",
+      "name": "password",
+      "required": true,
+      "secret": true,
+      "type": "string"
+    },
+    {
+      "description": "Supplied by the caller at discovery time and templated into step 2, where it is filled into 'textbox'.",
+      "name": "username",
+      "required": true,
+      "secret": false,
+      "type": "string"
+    },
+    {
+      "description": "Supplied by the caller at discovery time and templated into step 5, where it is selected into 'combobox'.",
+      "name": "account_number",
+      "required": true,
+      "secret": false,
+      "type": "string"
+    }
+  ],
+  "outputs": [
+    {
+      "description": "Read at step 7 from the cell labelled '-$2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.00'. Kept as a string: the artifact returns what the screen said, and interpreting it is the caller's decision.",
+      "from_step": 7,
+      "locator": {
+        "fallbacks": [],
+        "primary": {
+          "exact": false,
+          "name": null,
+          "nth": 13,
+          "role": "cell",
+          "selector": null,
+          "strategy": "role"
+        }
+      },
+      "name": "cell",
+      "type": "string"
+    },
+    {
+      "description": "Read at step 8 from the cell labelled 'Ending balance as of 9/11/26 3:10 PM'. Kept as a string: the artifact returns what the screen said, and interpreting it is the caller's decision.",
+      "from_step": 8,
+      "locator": {
+        "fallbacks": [
+          {
+            "exact": false,
+            "name": "Ending balance as of",
+            "nth": null,
+            "role": null,
+            "selector": null,
+            "strategy": "text"
+          },
+          {
+            "exact": false,
+            "name": null,
+            "nth": 10,
+            "role": "cell",
+            "selector": null,
+            "strategy": "role"
+          }
+        ],
+        "primary": {
+          "exact": false,
+          "name": "Ending balance as of",
+          "nth": null,
+          "role": "cell",
+          "selector": null,
+          "strategy": "role"
+        }
+      },
+      "name": "ending_balance_as_of",
+      "type": "string"
+    },
+    {
+      "description": "Read at step 9 from the cell labelled 'Available balance'. Kept as a string: the artifact returns what the screen said, and interpreting it is the caller's decision.",
+      "from_step": 9,
+      "locator": {
+        "fallbacks": [
+          {
+            "exact": true,
+            "name": "Available balance",
+            "nth": null,
+            "role": null,
+            "selector": null,
+            "strategy": "label"
+          },
+          {
+            "exact": true,
+            "name": "Available balance",
+            "nth": null,
+            "role": null,
+            "selector": null,
+            "strategy": "text"
+          },
+          {
+            "exact": false,
+            "name": null,
+            "nth": 12,
+            "role": "cell",
+            "selector": null,
+            "strategy": "role"
+          }
+        ],
+        "primary": {
+          "exact": true,
+          "name": "Available balance",
+          "nth": null,
+          "role": "cell",
+          "selector": null,
+          "strategy": "role"
+        }
+      },
+      "name": "available_balance",
+      "type": "string"
+    }
+  ],
+  "schema_version": "1.0",
+  "steps": [
+    {
+      "action": "navigate",
+      "description": "Open the capability's target page.",
+      "index": 0,
+      "locator": null,
+      "url": "http://demo.testfire.net/login.jsp",
+      "value": null
+    },
+    {
+      "action": "fill",
+      "description": "Fill in the password field with the provided password to proceed with the login process.",
+      "index": 1,
+      "locator": {
+        "fallbacks": [],
+        "primary": {
+          "exact": false,
+          "name": null,
+          "nth": 2,
+          "role": "textbox",
+          "selector": null,
+          "strategy": "role"
+        }
+      },
+      "url": null,
+      "value": "{{password}}"
+    },
+    {
+      "action": "fill",
+      "description": "Fill in the username field with the provided username to proceed with the login process.",
+      "index": 2,
+      "locator": {
+        "fallbacks": [],
+        "primary": {
+          "exact": false,
+          "name": null,
+          "nth": 1,
+          "role": "textbox",
+          "selector": null,
+          "strategy": "role"
+        }
+      },
+      "url": null,
+      "value": "{{username}}"
+    },
+    {
+      "action": "click",
+      "description": "Clicking the Login button will submit the login credentials and proceed to the next page.",
+      "index": 3,
+      "locator": {
+        "fallbacks": [
+          {
+            "exact": true,
+            "name": "Login",
+            "nth": null,
+            "role": null,
+            "selector": null,
+            "strategy": "label"
+          },
+          {
+            "exact": true,
+            "name": "Login",
+            "nth": null,
+            "role": null,
+            "selector": null,
+            "strategy": "text"
+          },
+          {
+            "exact": false,
+            "name": null,
+            "nth": 1,
+            "role": "button",
+            "selector": null,
+            "strategy": "role"
+          }
+        ],
+        "primary": {
+          "exact": true,
+          "name": "Login",
+          "nth": null,
+          "role": "button",
+          "selector": null,
+          "strategy": "role"
+        }
+      },
+      "url": null,
+      "value": null
+    },
+    {
+      "action": "click",
+      "description": "Click the 'GO' button to proceed to the account details page after selecting the account number.",
+      "index": 4,
+      "locator": {
+        "fallbacks": [
+          {
+            "exact": true,
+            "name": "GO",
+            "nth": null,
+            "role": null,
+            "selector": null,
+            "strategy": "label"
+          },
+          {
+            "exact": true,
+            "name": "GO",
+            "nth": null,
+            "role": null,
+            "selector": null,
+            "strategy": "text"
+          },
+          {
+            "exact": false,
+            "name": null,
+            "nth": 1,
+            "role": "button",
+            "selector": null,
+            "strategy": "role"
+          }
+        ],
+        "primary": {
+          "exact": true,
+          "name": "GO",
+          "nth": null,
+          "role": "button",
+          "selector": null,
+          "strategy": "role"
+        }
+      },
+      "url": null,
+      "value": null
+    },
+    {
+      "action": "select",
+      "description": "Select the account number dropdown and choose the specified account number to proceed.",
+      "index": 5,
+      "locator": {
+        "fallbacks": [],
+        "primary": {
+          "exact": false,
+          "name": null,
+          "nth": 0,
+          "role": "combobox",
+          "selector": null,
+          "strategy": "role"
+        }
+      },
+      "url": null,
+      "value": "{{account_number}}"
+    },
+    {
+      "action": "click",
+      "description": "Click the 'Select Account' button to proceed with the selected account number.",
+      "index": 6,
+      "locator": {
+        "fallbacks": [
+          {
+            "exact": true,
+            "name": "Select Account",
+            "nth": null,
+            "role": null,
+            "selector": null,
+            "strategy": "label"
+          },
+          {
+            "exact": true,
+            "name": "Select Account",
+            "nth": null,
+            "role": null,
+            "selector": null,
+            "strategy": "text"
+          },
+          {
+            "exact": false,
+            "name": null,
+            "nth": 1,
+            "role": "button",
+            "selector": null,
+            "strategy": "role"
+          }
+        ],
+        "primary": {
+          "exact": true,
+          "name": "Select Account",
+          "nth": null,
+          "role": "button",
+          "selector": null,
+          "strategy": "role"
+        }
+      },
+      "url": null,
+      "value": null
+    },
+    {
+      "action": "read",
+      "description": "Read the available balance from the current page as it is the final step in the goal.",
+      "index": 7,
+      "locator": {
+        "fallbacks": [],
+        "primary": {
+          "exact": false,
+          "name": null,
+          "nth": 13,
+          "role": "cell",
+          "selector": null,
+          "strategy": "role"
+        }
+      },
+      "url": null,
+      "value": null
+    },
+    {
+      "action": "read",
+      "description": "Read the available balance as requested by the goal.",
+      "index": 8,
+      "locator": {
+        "fallbacks": [
+          {
+            "exact": false,
+            "name": "Ending balance as of",
+            "nth": null,
+            "role": null,
+            "selector": null,
+            "strategy": "text"
+          },
+          {
+            "exact": false,
+            "name": null,
+            "nth": 10,
+            "role": "cell",
+            "selector": null,
+            "strategy": "role"
+          }
+        ],
+        "primary": {
+          "exact": false,
+          "name": "Ending balance as of",
+          "nth": null,
+          "role": "cell",
+          "selector": null,
+          "strategy": "role"
+        }
+      },
+      "url": null,
+      "value": null
+    },
+    {
+      "action": "read",
+      "description": "The goal requires reading the available balance, which is listed under the 'Available balance' row.",
+      "index": 9,
+      "locator": {
+        "fallbacks": [
+          {
+            "exact": true,
+            "name": "Available balance",
+            "nth": null,
+            "role": null,
+            "selector": null,
+            "strategy": "label"
+          },
+          {
+            "exact": true,
+            "name": "Available balance",
+            "nth": null,
+            "role": null,
+            "selector": null,
+            "strategy": "text"
+          },
+          {
+            "exact": false,
+            "name": null,
+            "nth": 12,
+            "role": "cell",
+            "selector": null,
+            "strategy": "role"
+          }
+        ],
+        "primary": {
+          "exact": true,
+          "name": "Available balance",
+          "nth": null,
+          "role": "cell",
+          "selector": null,
+          "strategy": "role"
+        }
+      },
+      "url": null,
+      "value": null
+    }
+  ],
+  "target": "http://demo.testfire.net/login.jsp",
+  "version": 1
+}

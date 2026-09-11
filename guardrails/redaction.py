@@ -64,6 +64,18 @@ def _card_sub(m: "re.Match[str]") -> str:
 #              grouped PAN like 4111 1111 1111 1111 contains substrings
 #              the phone pattern would match, splitting the redaction.
 #  7. PHONE  - last, as the loosest numeric pattern.
+def _query_value_sub(match: "re.Match[str]") -> str:
+    """Redact one query-string value, leaving the parameter name visible.
+
+    Values that are already redaction markers are passed through untouched, so
+    a more specific rule that ran earlier (SSN, card, token) keeps its precise
+    kind tag and repeated calls stay idempotent.
+    """
+    prefix, value = match.group(1), match.group(2)
+    if not value or value.startswith("[REDACTED:"):
+        return match.group(0)
+    return f"{prefix}[REDACTED:QUERYVAL]"
+
 PATTERNS: list[tuple[re.Pattern[str], object]] = [
     (re.compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._\-+/=]+"), r"\1 [REDACTED:TOKEN]"),
     (
@@ -83,6 +95,13 @@ PATTERNS: list[tuple[re.Pattern[str], object]] = [
     (
         re.compile(r"(?:\+?1[-.\s]?)?\(?\b\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b"),
         "[REDACTED:PHONE]",
+    ),
+    # Query-string values, swept last so the specific rules above keep their
+    # kind tags. A filled form value reaching a URL is a real leak path: a GET
+    # form puts it in the query string, and any URL we log would carry it.
+    (
+        re.compile(r"([?&][^=&#\s]+=)([^&#\s]*)"),
+        _query_value_sub,
     ),
 ]
 
