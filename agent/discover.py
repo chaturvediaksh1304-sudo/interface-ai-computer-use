@@ -385,6 +385,47 @@ class UnknownRefError(DiscoveryError):
     """
 
 
+def _retarget_label_read(observation, node, read_text, session, step_index, logger):
+    """If a read landed on a label, read the value cell beside it instead.
+
+    A table pairs a label cell with a value cell, and a model asked for "the
+    balance" often reads the cell that says "Available balance" rather than the
+    one holding the number. The tell is exact: the text read back IS the node's
+    own accessible name, and that name is words rather than data.
+
+    The neighbouring value is then actually read, not inferred, so the artifact
+    only ever records a step that was really performed. Returns the replacement
+    ``(node, name_nth, role_nth, ambiguous, prefix_nth, detail)`` or None to keep
+    what the model chose.
+    """
+    name = (node.get("name") or "").strip()
+    if not name or read_text.strip() != name or _name_is_unusable(name):
+        return None
+
+    nodes = observation.nodes
+    position = next((i for i, n in enumerate(nodes) if n.get("ref") == node.get("ref")), None)
+    if position is None:
+        return None
+
+    # Look only a short way ahead: the value belonging to a label is adjacent to
+    # it, and anything further off is a different row's data.
+    for candidate in nodes[position + 1: position + 5]:
+        candidate_name = (candidate.get("name") or "").strip()
+        if not candidate.get("ref") or not candidate_name or not _name_is_unusable(candidate_name):
+            continue
+        attempt = session.act({"action": "read", "ref": candidate["ref"]})
+        if not attempt.ok or not (attempt.detail or "").strip():
+            return None
+        logger.info(
+            "read retargeted from a label to the value beside it",
+            extra={"phase": "discover", "step": step_index, "label": name,
+                   "value_role": candidate.get("role")},
+        )
+        resolved = _index_node(observation, candidate["ref"], step_index)
+        return (*resolved, attempt.detail)
+    return None
+
+
 def _loggable(action: dict) -> dict:
     """An action safe to write to a log: its value replaced by a description.
 
@@ -426,9 +467,15 @@ def _index_node(observation, ref: str, step_index: int) -> tuple[dict, int, int,
     return node, same_name.index(node), same_role.index(node), len(same_name) > 1, prefix_nth
 
 
-def _output_name(node: dict, taken: set[str]) -> str:
-    """A stable output name derived from what the read node is called on screen."""
-    raw = (node.get("name") or "").strip()
+def _output_name(node: dict, taken: set[str], label: str = "") -> str:
+    """A stable output name derived from what the read node is called on screen.
+
+    ``label`` is set when the read was retargeted off a label onto the value
+    beside it. That label is precisely what the screen calls this value, so it
+    names the output far better than the value cell's own name, which is the
+    data itself.
+    """
+    raw = (label or node.get("name") or "").strip()
     # Never name an output after its own value: "2000000000_00" tells a caller
     # nothing and differs every run. Use the stable words if there are any, and
     # otherwise fall back to the node's role.
@@ -669,7 +716,25 @@ def discover(
         history.append({"index": attempt, "action": action, "ok": True, "detail": result.detail})
 
         if verb == "read":
-            name = _output_name(node, {o["name"] for o in outputs_read})
+            swap = _retarget_label_read(
+                observation, node, result.detail or "", session, step_index, logger
+            )
+            if swap is not None:
+                # Only the transcript's node changes. The output's VALUE is read
+                # from the locator at replay time, so there is nothing else here
+                # that needs the text this read returned.
+                label_name = (node.get("name") or "").strip()
+                node, name_nth, role_nth, ambiguous, prefix_nth, _detail = swap
+                transcript[-1].update({
+                    "node": node, "name_nth": name_nth, "role_nth": role_nth,
+                    "ambiguous": ambiguous, "prefix_nth": prefix_nth,
+                    # The label this read moved off is the best name the output
+                    # will ever have: it is what the screen calls this value.
+                    "label": label_name,
+                })
+
+            name = _output_name(node, {o["name"] for o in outputs_read},
+                                label=transcript[-1].get("label", ""))
             outputs_read.append({
                 "name": name,
                 "type": "string",

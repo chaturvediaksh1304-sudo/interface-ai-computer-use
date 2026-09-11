@@ -2,7 +2,7 @@
 
 Live state of the project. Updated after every phase.
 
-**Last updated:** 2026-09-11 — Phases 3 and 4 complete. A live LLM-driven discovery run produces
+**Last updated:** 2026-09-11 — Phases 3 and 4 complete; outputs now return values rather than labels. A live LLM-driven discovery run produces
 an artifact that replays deterministically three times running, with no model in the replay path.
 Phases 1-2 committed (`2773bca`, `2462511`); Phases 3-4 are **uncommitted**. No remote exists.
 
@@ -137,9 +137,12 @@ allowlist. Two things are waiting on a decision:
   fallback won instantly with the wrong element. Mitigated by giving the primary a longer
   budget (6s vs 2s), but not removed. For interactive steps a wrong click is worse than a clean
   failure, so these fallbacks should probably be dropped for click/fill/select.
-- **Two of three outputs return label text, not values** (`available_balance` reads back
-  "Available balance"). The model chose to read label cells; nothing in the compiler notices
-  that an output is a label rather than a datum.
+- **Duplicate outputs.** In the current artifact `cell` and `available_balance` both resolve to
+  the same cell (`nth=13`), because the model read it once directly and once via a label the
+  retargeting then followed to the same place. Harmless but untidy; the compiler does not
+  notice two outputs pointing at one element.
+- `cell` is still a weak output name — it comes from a read that landed straight on a value
+  with no label to borrow a name from.
 - **`BUSINESS_SIGNALS` is still the 8 generic phrases** written before the real UI was known.
   It should be replaced with Altoro's actual empty-state wording.
 - The example artifact from Phase 2 still describes a member-search flow that was guessed, not

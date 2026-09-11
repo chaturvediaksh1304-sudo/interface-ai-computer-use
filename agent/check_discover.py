@@ -537,3 +537,60 @@ assert _SECRET not in _written, "the filled value reached the log file"
 assert '"<29 chars>"' in _written, "the value's length should be logged in its place"
 
 print("PASS (h) a filled value never reaches the log file; only its length is recorded")
+
+
+# --------------------------------------------------------------------------
+# (i) a read that lands on a label is retargeted to the value beside it
+# --------------------------------------------------------------------------
+from agent.discover import _retarget_label_read  # noqa: E402
+
+
+class _Obs:
+    def __init__(self, nodes):
+        self.nodes = nodes
+
+
+class _ReadSession:
+    """Returns each node's own name as the text read from it, like a real table."""
+
+    def __init__(self, nodes):
+        self.by_ref = {n["ref"]: n for n in nodes}
+        self.reads = []
+
+    def act(self, action):
+        self.reads.append(action["ref"])
+        node = self.by_ref[action["ref"]]
+        return SimpleNamespace(ok=True, action=action, detail=node["name"], observation=None)
+
+
+_ROW = [
+    {"ref": "r1", "role": "cell", "name": "Available balance"},
+    {"ref": "r2", "role": "cell", "name": "-$1,234.56"},
+    {"ref": "r3", "role": "cell", "name": "Account holder"},
+]
+_label, _value = _ROW[0], _ROW[1]
+
+# Reading the label cell must hand back the value cell next to it.
+_session = _ReadSession(_ROW)
+_swap = _retarget_label_read(_Obs(_ROW), _label, "Available balance", _session,
+                             7, quiet_logger("check-i1"))
+assert _swap is not None, "a read that returned its own label should have been retargeted"
+assert _swap[0]["ref"] == "r2", _swap[0]
+assert _session.reads == ["r2"], "the value must be actually read, never inferred"
+
+# A read that returned real data is left alone -- it already found the value.
+assert _retarget_label_read(_Obs(_ROW), _value, "-$1,234.56", _ReadSession(_ROW),
+                            7, quiet_logger("check-i2")) is None
+
+# A read whose text differs from the node's name is content, not a label.
+assert _retarget_label_read(_Obs(_ROW), _label, "some other text", _ReadSession(_ROW),
+                            7, quiet_logger("check-i3")) is None
+
+# A label with no value cell after it stays as it is rather than grabbing something wrong.
+_tail = [{"ref": "t1", "role": "cell", "name": "Account holder"},
+         {"ref": "t2", "role": "cell", "name": "Jane Q Public"}]
+assert _retarget_label_read(_Obs(_tail), _tail[0], "Account holder", _ReadSession(_tail),
+                            7, quiet_logger("check-i4")) is None
+
+print("PASS (i) a read returning its own label is retargeted to the adjacent value cell, "
+      "which is really read; genuine data reads are left alone")

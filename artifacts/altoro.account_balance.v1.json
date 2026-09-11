@@ -1,46 +1,21 @@
 {
   "capability_id": "altoro.account_balance",
   "checkpoint": {
-    "expected": "Available balance",
+    "expected": "-$2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.00",
     "kind": "a11y_node_present",
     "locator": {
-      "fallbacks": [
-        {
-          "exact": true,
-          "name": "Available balance",
-          "nth": null,
-          "role": null,
-          "selector": null,
-          "strategy": "label"
-        },
-        {
-          "exact": true,
-          "name": "Available balance",
-          "nth": null,
-          "role": null,
-          "selector": null,
-          "strategy": "text"
-        },
-        {
-          "exact": false,
-          "name": null,
-          "nth": 12,
-          "role": "cell",
-          "selector": null,
-          "strategy": "role"
-        }
-      ],
+      "fallbacks": [],
       "primary": {
-        "exact": true,
-        "name": "Available balance",
-        "nth": null,
+        "exact": false,
+        "name": null,
+        "nth": 13,
         "role": "cell",
         "selector": null,
         "strategy": "role"
       }
     }
   },
-  "created_at": "2026-09-11T20:29:09.241070Z",
+  "created_at": "2026-09-11T21:29:59.331976Z",
   "goal": "Sign in with the given username and password using the login form. You then land on the account summary page. It has a dropdown of account numbers with a button named exactly 'GO' beside it -- that is the one to use, NOT the site search button named 'Go'. Select the account_number value in the dropdown, click the 'GO' button, then read the available balance from the resulting Balance Detail page. Say done once you have read the balance.",
   "inputs": [
     {
@@ -84,31 +59,14 @@
       "type": "string"
     },
     {
-      "description": "Read at step 8 from the cell labelled 'Ending balance as of 9/11/26 3:28 PM'. Kept as a string: the artifact returns what the screen said, and interpreting it is the caller's decision.",
+      "description": "Read at step 8 from the cell labelled '-$2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.00'. Kept as a string: the artifact returns what the screen said, and interpreting it is the caller's decision.",
       "from_step": 8,
       "locator": {
-        "fallbacks": [
-          {
-            "exact": false,
-            "name": "Ending balance as of",
-            "nth": null,
-            "role": null,
-            "selector": null,
-            "strategy": "text"
-          },
-          {
-            "exact": false,
-            "name": null,
-            "nth": 10,
-            "role": "cell",
-            "selector": null,
-            "strategy": "role"
-          }
-        ],
+        "fallbacks": [],
         "primary": {
           "exact": false,
-          "name": "Ending balance as of",
-          "nth": null,
+          "name": null,
+          "nth": 11,
           "role": "cell",
           "selector": null,
           "strategy": "role"
@@ -118,39 +76,14 @@
       "type": "string"
     },
     {
-      "description": "Read at step 9 from the cell labelled 'Available balance'. Kept as a string: the artifact returns what the screen said, and interpreting it is the caller's decision.",
+      "description": "Read at step 9 from the cell labelled '-$2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.00'. Kept as a string: the artifact returns what the screen said, and interpreting it is the caller's decision.",
       "from_step": 9,
       "locator": {
-        "fallbacks": [
-          {
-            "exact": true,
-            "name": "Available balance",
-            "nth": null,
-            "role": null,
-            "selector": null,
-            "strategy": "label"
-          },
-          {
-            "exact": true,
-            "name": "Available balance",
-            "nth": null,
-            "role": null,
-            "selector": null,
-            "strategy": "text"
-          },
-          {
-            "exact": false,
-            "name": null,
-            "nth": 12,
-            "role": "cell",
-            "selector": null,
-            "strategy": "role"
-          }
-        ],
+        "fallbacks": [],
         "primary": {
-          "exact": true,
-          "name": "Available balance",
-          "nth": null,
+          "exact": false,
+          "name": null,
+          "nth": 13,
           "role": "cell",
           "selector": null,
           "strategy": "role"
@@ -294,7 +227,7 @@
     },
     {
       "action": "select",
-      "description": "Select the account number 800002 from the dropdown to proceed to the account summary page.",
+      "description": "Select the account number dropdown and choose the specified account number to proceed.",
       "index": 5,
       "locator": {
         "fallbacks": [],
@@ -355,7 +288,7 @@
     },
     {
       "action": "read",
-      "description": "The available balance is displayed in the cell with the ref 'f5e71', so reading it will fulfill the goal.",
+      "description": "The available balance is displayed in the cell with the ref 'f5e71', so reading it will provide the required value.",
       "index": 7,
       "locator": {
         "fallbacks": [],
@@ -373,31 +306,14 @@
     },
     {
       "action": "read",
-      "description": "Read the available balance as requested by the goal.",
+      "description": "The available balance is listed under the 'Available balance' row, so read this value to complete the goal.",
       "index": 8,
       "locator": {
-        "fallbacks": [
-          {
-            "exact": false,
-            "name": "Ending balance as of",
-            "nth": null,
-            "role": null,
-            "selector": null,
-            "strategy": "text"
-          },
-          {
-            "exact": false,
-            "name": null,
-            "nth": 10,
-            "role": "cell",
-            "selector": null,
-            "strategy": "role"
-          }
-        ],
+        "fallbacks": [],
         "primary": {
           "exact": false,
-          "name": "Ending balance as of",
-          "nth": null,
+          "name": null,
+          "nth": 11,
           "role": "cell",
           "selector": null,
           "strategy": "role"
@@ -411,36 +327,11 @@
       "description": "The goal requires reading the available balance, which is listed under the 'Available balance' row.",
       "index": 9,
       "locator": {
-        "fallbacks": [
-          {
-            "exact": true,
-            "name": "Available balance",
-            "nth": null,
-            "role": null,
-            "selector": null,
-            "strategy": "label"
-          },
-          {
-            "exact": true,
-            "name": "Available balance",
-            "nth": null,
-            "role": null,
-            "selector": null,
-            "strategy": "text"
-          },
-          {
-            "exact": false,
-            "name": null,
-            "nth": 12,
-            "role": "cell",
-            "selector": null,
-            "strategy": "role"
-          }
-        ],
+        "fallbacks": [],
         "primary": {
-          "exact": true,
-          "name": "Available balance",
-          "nth": null,
+          "exact": false,
+          "name": null,
+          "nth": 13,
           "role": "cell",
           "selector": null,
           "strategy": "role"
