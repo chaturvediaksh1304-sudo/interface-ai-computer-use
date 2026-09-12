@@ -1,0 +1,2 @@
+{"ts": "2026-09-12T01:15:08.359843+00:00", "level": "INFO", "logger": "interface_ai.selfcheck-logging", "event": "lookup for [REDACTED:SSN] failed", "member_email": "[REDACTED:EMAIL]", "api_key": "[REDACTED:SECRET]", "context": {"card": "[REDACTED:CARD]", "step": 3}, "step_index": 3}
+{"ts": "2026-09-12T01:15:08.360249+00:00", "level": "INFO", "logger": "interface_ai.selfcheck-logging", "event": "second call", "note": "no duplicate handlers"}
