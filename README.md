@@ -150,9 +150,9 @@ Run the already-discovered capability with no model in the loop:
 ```
 
 `artifacts/altoro.account_balance.v1.json` is the real, LLM-discovered capability. It declares
-three required inputs — `username`, `password` (marked secret), and `account_number` — and two
-string outputs, `available_balance` and `cell`. Nine steps, an accessibility-tree checkpoint,
-and locators with CSS fallbacks.
+three required inputs — `username`, `password` (marked secret), and `account_number` — and one
+string output, `cell`. Eight steps, an accessibility-tree checkpoint, and locators with
+fallbacks.
 
 When a replay does not succeed — a bad input, or the page not arriving in the expected state —
 it does not crash. It classifies the result through the error taxonomy and returns a structured
@@ -266,10 +266,11 @@ REPORT.md       the design defence
 
 | File | What it demonstrates |
 | --- | --- |
-| `discovery-live-01.jsonl` | The real LLM-driven discovery run that produced the shipped artifact — 66 records covering 24 accessibility-tree observations, 10 model decisions, 12 executed actions, and the compile. It includes recovery events worth reading: a navigation blocked by the allowlist, a recovery off a browser error page, a dropped bad step, and a `read` retargeted from a label to the value beside it. |
-| `replay-live-01.jsonl` | One clean deterministic replay of that artifact — 57 records, nine steps, checkpoint asserted, both declared outputs returned. No model call anywhere in the file. |
-| `replay-determinism.jsonl` | Six consecutive replays back to back (342 records). Every one returns the same two outputs at the same lengths with a clean checkpoint. This is the determinism claim, shown rather than asserted. |
-| `replay-error-case.jsonl` | A replay that fails, and fails honestly: `HARD_FAILURE` at step 4, `locator not found after every declared fallback`, carrying the step index, the expected description, the observed state naming each fallback tried, and a pointer to the screenshot. Not a crash — a structured result. |
+| `discovery-live-01.jsonl` | The real LLM-driven discovery run that produced the shipped artifact — 45 records covering 17 accessibility-tree observations, 8 model decisions, 8 executed actions, and the compile. It includes recovery events worth reading: a navigation blocked by the allowlist, a recovery off a browser error page, a dropped bad step, and a `read` retargeted from a label to the value beside it. |
+| `replay-live-01.jsonl` | One clean deterministic replay of that artifact — 52 records, eight steps, checkpoint asserted, the declared output returned. No model call anywhere in the file. |
+| `replay-determinism.jsonl` | Three consecutive replays back to back (156 records). Every one returns the same output at the same length with a clean checkpoint. This is the determinism claim, shown rather than asserted. |
+| `replay-error-case.jsonl` | The same capability replayed with bad credentials. The page says "Login Failed: ... this username or password was not found in our system", so this returns a **business outcome** naming that signal — the bank answering, not the automation breaking. A structured result, not a crash. |
+| `replay-hard-failure.jsonl` | A replay that genuinely breaks: an unknown account number, `HARD_FAILURE` at step 5 with the step index, expected vs. observed, and a pointer to `replay_altoro.png`. The dropdown simply has no such option and the page never says why, so no domain answer is claimed. |
 | `replay_altoro.png` | The frame captured at the moment of that hard failure. This is the `evidence` pointer the failure result returns. |
 | `phase1-manual-test.jsonl` | The guardrail integration test: one allowed action and two blocked ones, logged through the redacting logger. Short, but it is the record that the allowlist and the log pipeline work together. |
 | `phase6-handoff.jsonl` | The live escalation run — 29 records. The agent stops for want of credentials, raises the intervention, hands the session to a human, applies six operator actions (one of which is blocked by the allowlist and one ignored as invalid), and resumes on the same session object. |
@@ -294,10 +295,9 @@ Stated plainly; `Memory.md` and `REPORT.md` carry the detail.
   re-click recovery exists for exactly this condition and is proven by `replay.check_engine`,
   but it has not yet been observed firing against the live site.
 
-- **The shipped artifact was discovered by a local 14B model and is imperfect.** Two outputs,
-  `cell` and `available_balance`, resolve to the same page cell — the model read the value once
-  directly and once via a label, and the compiler does not notice two outputs pointing at one
-  element. `cell` is a weak name for the same reason. The checkpoint's `expected` value is the
+- **The shipped artifact was discovered by a local 14B model and is imperfect.** Its single output
+  is named `cell`, because the read landed on a value with no nearby label to borrow a name
+  from, so the compiler fell back to the node's role. The checkpoint's `expected` value is the
   literal (and absurd) balance string the sandbox was showing at discovery time. None of this
   breaks replay, but a stronger discovery model would produce a tidier artifact.
 

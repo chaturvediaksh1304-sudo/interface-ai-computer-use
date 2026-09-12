@@ -175,17 +175,17 @@ honestly interpret would put a wrong action into a real back-office UI.
 
 ### What the real artifact looks like, warts included
 
-`artifacts/altoro.account_balance.v1.json` — nine steps, three inputs (`password` secret,
-`username`, `account_number`), two outputs, checkpoint `a11y_node_present`. Four honest
+`artifacts/altoro.account_balance.v1.json` — eight steps, three inputs (`password` secret,
+`username`, `account_number`), one output, checkpoint `a11y_node_present`. Three honest
 observations:
 
 - **Its login-form locators are positional** (`role=textbox nth=1` / `nth=2`), because this
   application's login inputs have no accessible names at all. Where names exist, the ladder used
   them: step 3 is `role=button name='Login'` with `label` and `text` fallbacks. The ladder degrades
   per element, not per site, and this one file shows both ends of it.
-- **Two outputs resolve to the same cell.** `cell` (step 7) and `available_balance` (step 8) both
-  carry `role=cell nth=13`, because the model read the value directly once and then read the label
-  beside it, which the retargeting followed back to the same place. Harmless, untidy, and the
+- **The single output is named `cell`.** The read landed straight on a value whose accessible name
+  is the figure itself, so there was no neighbouring label to borrow a name from and the compiler
+  fell back to the node's role. Accurate, useless to a caller, and the
   compiler does not notice.
 - **`cell` is a bad output name**, inherited from a read that landed straight on a value with no
   label to borrow words from.
@@ -212,10 +212,10 @@ the fallback strategy in the tree.
 
 ### The determinism evidence
 
-`evidence/replay-determinism.jsonl` holds six consecutive replays of the live artifact against
-`demo.testfire.net` (342 records, none unparseable; six `replay.start` / `replay.result` pairs).
-Comparing the `(step_index, action, ok, locator_match)` tuple sequence of all nine steps across all
-six runs: **identical in every run**. Every step matched on its *primary* locator; no fallback was
+`evidence/replay-determinism.jsonl` holds three consecutive replays of the live artifact against
+`demo.testfire.net` (156 records, none unparseable; three `replay.result` records).
+Comparing the `(step_index, action, ok, locator_match)` tuple sequence of all eight steps across all
+three runs: **identical in every run**. Every step matched on its *primary* locator; no fallback was
 used anywhere; `retry_count` is 0 in all six; the checkpoint passed in all six; both outputs came
 back at 105 characters each. `evidence/replay-live-01.jsonl` holds three further clean runs of the
 same artifact — the JSONL sinks are append-mode, so each demo run accumulates rather than
@@ -291,7 +291,7 @@ bounded at 2 and then escalate. It passes.
 
 ### The error-case run, and what it honestly shows
 
-`evidence/replay-error-case.jsonl` (40 records, 29.1 s) is the same artifact replayed with bad
+`evidence/replay-error-case.jsonl` (33 records) is the same artifact replayed with bad
 credentials. Steps 0–3 succeed — the form fills and the Login button is clicked, all on primary
 locators. Step 4 looks for the `GO` button, which does not exist because the login failed. What
 happens next is worth reading closely:
@@ -569,8 +569,8 @@ discovered while writing the report; all of it is recorded in `Memory.md` or vis
   or password was not found in our system."` is a genuine domain answer reported as a hard failure
   because no marker matched. Fixing it is a one-line reviewed data change; it has not been made,
   and pretending the current list is tuned to this UI would be the dishonest option.
-- **Duplicate outputs.** `cell` and `available_balance` resolve to the same cell. The compiler does
-  not notice two outputs pointing at one element, and `cell` is a poor name besides (§2).
+- **`cell` is a poor output name.** It comes from a read that landed straight on a value with no
+  neighbouring label to borrow a name from, so the compiler fell back to the node's role (§2).
 - **`param_names` is empty when a page's inputs have no accessible names**, which is exactly the
   case in the live intervention. It is derived from the page rather than from the artifact's
   declared inputs; deriving it from the artifact would be sturdier whenever a capability is in play.
@@ -606,11 +606,11 @@ replacing it.
 
 | File | Records | What it shows |
 |---|---|---|
-| `evidence/discovery-live-01.jsonl` | 66 | the live LLM-driven run: 10 decisions, one allowlist block, one dead-end step dropped, one read retargeted |
-| `evidence/replay-determinism.jsonl` | 342 | six consecutive replays, step for step identical |
-| `evidence/replay-live-01.jsonl` | 171 | three further clean replays, no model on the path |
-| `evidence/replay-error-case.jsonl` | 40 | bad input, bounded recovery, honest hard failure with a screenshot |
-| `evidence/replay-altoro.account_balance.jsonl` | 1 | a caller error — two required params missing — rejected before a single browser action, per `_check_params` |
+| `evidence/discovery-live-01.jsonl` | 45 | the live LLM-driven run: 8 decisions, 17 observations, 8 executed actions |
+| `evidence/replay-determinism.jsonl` | 156 | three consecutive replays, step for step identical |
+| `evidence/replay-live-01.jsonl` | 52 | one clean replay, no model on the path |
+| `evidence/replay-error-case.jsonl` | 33 | bad credentials: a business outcome naming the "login failed" signal |
+| `evidence/replay-hard-failure.jsonl` | 38 | unknown account: an honest hard failure with a screenshot |
 | `evidence/phase6-handoff.jsonl` | 83 | three live human handoffs on the same session, one operator command blocked in each |
 | `evidence/phase1-manual-test.jsonl` | 3 | allowlist decisions logged through the redacting logger |
 | `evidence/interventions/iv-20260912-4344.json` | — | the live intervention request, with its screenshot beside it |
