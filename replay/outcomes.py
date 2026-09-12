@@ -63,6 +63,8 @@ from enum import Enum
 __all__ = [
     "RETRY_LIMIT",
     "BUSINESS_SIGNALS",
+    "EMPTY_RESULT_SIGNALS",
+    "BLOCKING_SIGNALS",
     "Outcome",
     "Condition",
     "ReplayResult",
@@ -83,7 +85,13 @@ RETRY_LIMIT = 2
 # short and literal on purpose: every entry here is permission for the system to
 # report a failed checkpoint as a successful domain answer, so each one should
 # be something a reviewer can point at in the real UI.
-BUSINESS_SIGNALS = (
+# Two kinds of domain answer, because they license different conclusions.
+#
+# EMPTY_RESULT_SIGNALS mean "the query found nothing". They explain a checkpoint
+# that did not match, and nothing more. They do NOT explain a missing element:
+# a search button should exist whether or not the last search found anything, so
+# a locator failure on a page showing one of these is still breakage.
+EMPTY_RESULT_SIGNALS = (
     "no such member",
     "member not found",
     "no member found",
@@ -91,8 +99,34 @@ BUSINESS_SIGNALS = (
     "no matching records",
     "no records found",
     "no accounts found",
+)
+
+# BLOCKING_SIGNALS mean "this flow cannot continue, and here is why". They DO
+# explain a missing element: sign in with bad credentials and the button the next
+# step wants was never rendered, because the page the capability expected was
+# never reached. Reporting that as breakage leaves the caller unable to tell
+# "your credentials are wrong" from "the automation is broken", which Rules.md
+# names as the worst failure mode of this system.
+#
+# The first two entries are verbatim from the sandbox. Keep every entry a full,
+# unambiguous phrase: a fragment like "failed" would match half the error pages
+# in the world and turn this guard into noise.
+# Deliberately narrow. Each entry must be a statement about the INPUT the caller
+# supplied or the entity it named -- something the caller can act on. Conditions
+# about our own plumbing are excluded even though they also block the flow: an
+# expired session or a denied permission means the automation's state decayed,
+# which is breakage to be reported or escalated, not an answer from the bank.
+# `check_outcomes` asserts exactly that for "your session has expired", and it
+# caught an earlier version of this list that wrongly included it.
+BLOCKING_SIGNALS = (
+    "login failed",
+    "this username or password was not found in our system",
     "account closed",
 )
+
+# Kept as the union so `business_signal` and anything importing this name still
+# see every phrase the system recognises.
+BUSINESS_SIGNALS = EMPTY_RESULT_SIGNALS + BLOCKING_SIGNALS
 
 
 class Outcome(str, Enum):
@@ -208,17 +242,22 @@ class ReplayHardFailure(Exception):
         self.result = result
 
 
-def business_signal(observed: str | None) -> str | None:
-    """Return the recognised empty-result phrase in `observed`, or None.
+def business_signal(observed: str | None, signals: tuple[str, ...] = BUSINESS_SIGNALS) -> str | None:
+    """Return the recognised domain phrase in `observed`, or None.
 
-    Case-insensitive substring match against ``BUSINESS_SIGNALS``. Returning the
-    matched phrase rather than a bool means the result can name exactly which
-    marker justified calling this a domain answer.
+    Case-insensitive substring match. Returning the matched phrase rather than a
+    bool means the result can name exactly which marker justified calling this a
+    domain answer.
+
+    ``signals`` narrows which phrases count, because what a phrase licenses
+    depends on what failed: a checkpoint mismatch is explained by any of them,
+    while a missing element is explained only by a blocking one. Defaults to
+    every phrase the system recognises.
     """
     if not observed:
         return None
     haystack = observed.lower()
-    for phrase in BUSINESS_SIGNALS:
+    for phrase in signals:
         if phrase in haystack:
             return phrase
     return None
@@ -292,16 +331,27 @@ def classify(
 
     # 1. Business outcome: the checkpoint failed, but the page affirmatively
     #    told us the domain answer. Both halves are required.
-    if condition is Condition.CHECKPOINT_FAILED:
-        signal = business_signal(observed)
+    # A checkpoint that did not match is explained by either kind of signal. A
+    # locator that was not found is explained only by a BLOCKING one -- an
+    # empty-result phrase says nothing about why an element is absent, and
+    # treating it as an explanation would mask real breakage as a domain answer.
+    explains = (
+        BUSINESS_SIGNALS
+        if condition is Condition.CHECKPOINT_FAILED
+        else BLOCKING_SIGNALS
+        if condition is Condition.LOCATOR_NOT_FOUND
+        else ()
+    )
+    if explains:
+        signal = business_signal(observed, explains)
         if signal is not None:
             return ReplayResult(
                 outcome=Outcome.BUSINESS,
                 capability_id=capability_id,
                 outputs={},
                 detail=(
-                    f"step {step_index}: checkpoint did not match, and the page "
-                    f"reported the recognised empty-result signal {signal!r}. "
+                    f"step {step_index}: the step did not complete ({condition.value}), "
+                    f"and the page reported the recognised domain signal {signal!r}. "
                     f"This is a valid domain answer, not a breakage."
                 ),
                 step_index=step_index,

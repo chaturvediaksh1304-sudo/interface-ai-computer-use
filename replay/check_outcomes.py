@@ -388,3 +388,51 @@ print(
     f"rejections + whitespace + closed-set); retries bounded at {RETRY_LIMIT} per "
     f"(step, condition), recorded, then escalated"
 )
+
+
+# ---------------------------------------------------------------------------------------
+# Empty-result vs blocking signals: what a phrase licenses depends on what failed
+# ---------------------------------------------------------------------------------------
+REAL_LOGIN_FAILURE = (
+    "Login Failed: We're sorry, but this username or password was not found in our system."
+)
+
+# The sandbox's own wording, taken verbatim from evidence/replay-error-case.jsonl. Bad
+# credentials leave the next step's button unrendered, and the page says exactly why --
+# so this is the bank answering about the caller's input, not the automation breaking.
+answered = classify(
+    Condition.LOCATOR_NOT_FOUND,
+    step_index=4,
+    expected="role=button name='GO'",
+    observed=REAL_LOGIN_FAILURE,
+    evidence=SHOT,
+    capability_id=CAP,
+)
+assert answered.outcome is Outcome.BUSINESS, (
+    f"a page stating why sign-in failed is a domain answer, got {answered.outcome}"
+)
+
+# An empty-result phrase explains a checkpoint that did not match...
+assert classify(
+    Condition.CHECKPOINT_FAILED, step_index=4, expected="balance",
+    observed="No results found", evidence=SHOT, capability_id=CAP,
+).outcome is Outcome.BUSINESS
+
+# ...but it explains nothing about a MISSING ELEMENT. A search button exists whether or
+# not the last search found anything, so this must stay breakage. This is the guard that
+# stops the fix above from turning into "any familiar phrase means success".
+assert classify(
+    Condition.LOCATOR_NOT_FOUND, step_index=4, expected="role=button name='Search'",
+    observed="No results found", evidence=SHOT, capability_id=CAP,
+).outcome is Outcome.HARD_FAILURE
+
+# A condition where the page was never dependably read cannot be excused by anything on it.
+for unreadable in (Condition.TIMEOUT, Condition.UNEXPECTED_STATE):
+    assert classify(
+        unreadable, step_index=4, expected="anything", observed=REAL_LOGIN_FAILURE,
+        evidence=SHOT, capability_id=CAP,
+    ).outcome is Outcome.HARD_FAILURE, unreadable
+
+print("PASS: signal kinds - the sandbox's real sign-in failure classifies as a domain "
+      "answer; an empty-result phrase still cannot excuse a missing element; and no "
+      "phrase counts when the page was never dependably read")

@@ -150,12 +150,20 @@ allowlist. Two things are waiting on a decision:
   a public demo, but the same path would bake a *secret* param's value into an artifact, which is
   exactly what rule 7 exists to prevent. The fix is to apply the template substitution (or a
   redaction pass) to descriptions as well as values.
-- **A real business outcome is being reported as breakage.** The error-case page says
-  "Login Failed: We're sorry, but this username or password was not found in our system." That is
-  the UI giving a true domain answer, and `replay.outcomes.BUSINESS_SIGNALS` does not contain the
-  phrase, so it classifies HARD_FAILURE. Rules.md names this conflation as the worst failure mode
-  of the system, and it is currently live in the evidence. Replacing the placeholder signal list
-  with the sandbox's actual empty-state wording fixes it.
+- ~~A real business outcome reported as breakage~~ — **fixed.** Signals are now split by what
+  they license. `EMPTY_RESULT_SIGNALS` ("no results found") explain a checkpoint that did not
+  match and nothing else; `BLOCKING_SIGNALS` ("login failed", "account closed") also explain a
+  MISSING ELEMENT, because bad credentials mean the next step's button was never rendered and the
+  page says why. An empty-result phrase still cannot excuse a missing element — a search button
+  exists whether or not the last search found anything — and no phrase counts at all when the page
+  was never dependably read (timeout, unexplained state). Bad credentials now return
+  `business_outcome` naming the signal, and `evidence/replay-error-case.jsonl` shows it.
+
+  Two things worth keeping: the existing check caught an early version of this fix that wrongly
+  treated "your session has expired" as a domain answer — an expired session is our own plumbing
+  decaying, not the bank answering about the caller's input. And a **nonexistent account number**
+  is still a HARD_FAILURE (`evidence/replay-hard-failure.jsonl`), because the dropdown simply has
+  no such option and the page never says why; with no affirmative message we do not claim one.
 - **Redaction corrupts a structured field named `secret`.** Logs contain
   `"secret": "[REDACTED:SECRET]"` where the value is a boolean flag, not a credential: the
   keyword-anchored rule matches on the key name. Harmless here, lossy in general.

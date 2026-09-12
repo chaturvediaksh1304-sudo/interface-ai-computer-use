@@ -167,8 +167,17 @@ def _describe_locator(locator) -> str:
 
 def _print_result(result, run_id: str, params: dict) -> None:
     print()
+    # A business outcome covers two genuinely different results: the capability
+    # ran and returned its outputs, or the UI gave a domain answer instead ("no
+    # such member", "login failed"). Both are valid results rather than
+    # breakage, but calling the second one "succeeded" above an empty output
+    # list reads as though something went wrong silently.
+    business_headline = (
+        "Replay succeeded" if result.outputs
+        else "Replay completed with a domain answer, not data"
+    )
     headline = {
-        Outcome.BUSINESS: "Replay succeeded",
+        Outcome.BUSINESS: business_headline,
         Outcome.RECOVERABLE: "Replay ended in a recoverable state",
         Outcome.HARD_FAILURE: "Replay FAILED",
     }[result.outcome]
