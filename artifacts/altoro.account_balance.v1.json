@@ -15,8 +15,8 @@
       }
     }
   },
-  "created_at": "2026-09-11T23:13:53.187799Z",
-  "goal": "Sign in with the given username and password using the login form. You then land on the account summary page. It has a dropdown of account numbers with a button named exactly 'GO' beside it -- that is the one to use, NOT the site search button named 'Go'. Select the account_number value in the dropdown, click the 'GO' button, then read the available balance from the resulting Balance Detail page. Say done once you have read the balance.",
+  "created_at": "2026-09-12T01:05:35.526126Z",
+  "goal": "Sign in with the given username and password using the login form. On the account summary page, select the account_number value in the dropdown and click the button named exactly 'GO' (not the site search 'Go'). On the Balance Detail page that follows, read the cell showing the available balance EXACTLY ONCE, then immediately reply with the done action.",
   "inputs": [
     {
       "description": "Supplied by the caller at discovery time and templated into step 1, where it is filled into 'textbox'.",
@@ -56,23 +56,6 @@
         }
       },
       "name": "cell",
-      "type": "string"
-    },
-    {
-      "description": "Read at step 8 from the cell labelled '-$2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.00'. Kept as a string: the artifact returns what the screen said, and interpreting it is the caller's decision.",
-      "from_step": 8,
-      "locator": {
-        "fallbacks": [],
-        "primary": {
-          "exact": false,
-          "name": null,
-          "nth": 13,
-          "role": "cell",
-          "selector": null,
-          "strategy": "role"
-        }
-      },
-      "name": "available_balance",
       "type": "string"
     }
   ],
@@ -159,8 +142,61 @@
     },
     {
       "action": "click",
-      "description": "Click the 'GO' button to proceed to the account details page after selecting the account number.",
+      "description": "Clicking the 'View Account Summary' link will navigate to the account summary page where the account number can be selected and the GO button can be clicked.",
       "index": 4,
+      "locator": {
+        "fallbacks": [
+          {
+            "exact": true,
+            "name": "View Account Summary",
+            "nth": null,
+            "role": null,
+            "selector": null,
+            "strategy": "label"
+          },
+          {
+            "exact": true,
+            "name": "View Account Summary",
+            "nth": null,
+            "role": null,
+            "selector": null,
+            "strategy": "text"
+          }
+        ],
+        "primary": {
+          "exact": true,
+          "name": "View Account Summary",
+          "nth": null,
+          "role": "link",
+          "selector": null,
+          "strategy": "role"
+        }
+      },
+      "url": null,
+      "value": null
+    },
+    {
+      "action": "select",
+      "description": "Select the account number as specified in the goal.",
+      "index": 5,
+      "locator": {
+        "fallbacks": [],
+        "primary": {
+          "exact": false,
+          "name": null,
+          "nth": 0,
+          "role": "combobox",
+          "selector": null,
+          "strategy": "role"
+        }
+      },
+      "url": null,
+      "value": "{{account_number}}"
+    },
+    {
+      "action": "click",
+      "description": "Click the 'GO' button to proceed to the account details page.",
+      "index": 6,
       "locator": {
         "fallbacks": [
           {
@@ -193,80 +229,9 @@
       "value": null
     },
     {
-      "action": "select",
-      "description": "Select the account number 800002 from the dropdown to proceed to the account summary page.",
-      "index": 5,
-      "locator": {
-        "fallbacks": [],
-        "primary": {
-          "exact": false,
-          "name": null,
-          "nth": 0,
-          "role": "combobox",
-          "selector": null,
-          "strategy": "role"
-        }
-      },
-      "url": null,
-      "value": "{{account_number}}"
-    },
-    {
-      "action": "click",
-      "description": "Click the 'Select Account' button to proceed with the selected account number.",
-      "index": 6,
-      "locator": {
-        "fallbacks": [
-          {
-            "exact": true,
-            "name": "Select Account",
-            "nth": null,
-            "role": null,
-            "selector": null,
-            "strategy": "label"
-          },
-          {
-            "exact": true,
-            "name": "Select Account",
-            "nth": null,
-            "role": null,
-            "selector": null,
-            "strategy": "text"
-          }
-        ],
-        "primary": {
-          "exact": true,
-          "name": "Select Account",
-          "nth": null,
-          "role": "button",
-          "selector": null,
-          "strategy": "role"
-        }
-      },
-      "url": null,
-      "value": null
-    },
-    {
       "action": "read",
-      "description": "Read the available balance from the current page as it is the final step before marking the task as done.",
+      "description": "Read the available balance as it is the next required value before proceeding to the done action.",
       "index": 7,
-      "locator": {
-        "fallbacks": [],
-        "primary": {
-          "exact": false,
-          "name": null,
-          "nth": 13,
-          "role": "cell",
-          "selector": null,
-          "strategy": "role"
-        }
-      },
-      "url": null,
-      "value": null
-    },
-    {
-      "action": "read",
-      "description": "The goal requires reading the available balance, which is listed under the 'Available balance' row.",
-      "index": 8,
       "locator": {
         "fallbacks": [],
         "primary": {

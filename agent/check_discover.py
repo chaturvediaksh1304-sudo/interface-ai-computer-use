@@ -523,7 +523,7 @@ print("PASS (g) value-shaped accessible names are rejected as locator anchors, "
 # --------------------------------------------------------------------------
 import pathlib  # noqa: E402
 
-from agent.discover import _loggable  # noqa: E402
+from agent.discover import _generalise_text, _loggable  # noqa: E402
 
 SECRET = "hunter2-not-a-real-password"
 scrubbed = _loggable({"action": "fill", "ref": "e4", "value": SECRET})
@@ -616,3 +616,42 @@ assert _retarget_label_read(_Obs(_tail), _tail[0], "Account holder", _ReadSessio
 
 print("PASS (i) a read returning its own label is retargeted to the adjacent value cell, "
       "which is really read; genuine data reads are left alone")
+
+
+# --------------------------------------------------------------------------
+# (j) a value must not survive in the artifact's PROSE either
+# --------------------------------------------------------------------------
+# Rule 7 guards Step.value. Nothing guards Step.description, which is the
+# model's own rationale -- and a model told to select account 800002 says so in
+# words. A real artifact shipped with exactly that leak.
+PROSE_SECRET = "PA55-phrase-9x"
+prose_script = [dict(e) for e in SCRIPT]
+prose_script[0] = {
+    "action": {"action": "fill", "ref": "@Member ID", "value": PROSE_SECRET},
+    "rationale": f"Type the passphrase {PROSE_SECRET} into the Member ID field.",
+}
+with contextlib.redirect_stdout(io.StringIO()):
+    prose_artifact = discover(
+        GOAL, TARGET, client=FakeClient(prose_script),
+        session=FakeSession(PAGES, transitions=[1, 1, 2, 2], fail_acts={3}),
+        logger=quiet_logger("check-j"), run_inputs={"passphrase": PROSE_SECRET},
+        capability_id="altoro.prose",
+    )
+
+serialised = prose_artifact.model_dump_json()
+assert PROSE_SECRET not in serialised, (
+    "the supplied value survived somewhere in the artifact: "
+    f"{[s.description for s in prose_artifact.steps]}"
+)
+# It must be generalised, not merely deleted -- the sentence should still read.
+assert "{{passphrase}}" in prose_artifact.steps[1].description, prose_artifact.steps[1].description
+assert prose_artifact.steps[1].value == "{{passphrase}}", prose_artifact.steps[1].value
+
+# Whole-token matching: a value must not corrupt a longer string containing it.
+assert _generalise_text("account 800002 and 8000021", {"800002": "acct"}) == (
+    "account {{acct}} and 8000021"
+)
+assert _generalise_text("", {"x": "y"}) == ""
+
+print("PASS (j) a supplied value is generalised out of the artifact's prose as well as its "
+      "values, and whole-token matching leaves lookalike strings intact")

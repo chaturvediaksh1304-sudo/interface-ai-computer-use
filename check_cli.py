@@ -20,6 +20,8 @@ sandbox and (for discovery) a model, so they are proven by the evidence runs und
 evidence/, not from here.
 """
 
+import json
+import pathlib
 import subprocess
 import sys
 import time
@@ -141,7 +143,16 @@ def rendered(printer, *args) -> str:
 
 artifact = load_artifact(ROOT / ARTIFACT)
 text = rendered(cli._print_artifact, artifact, Path(ARTIFACT), "discover-x", "some-model")
-assert "Steps (9)" in text and "Inputs (3)" in text and "Outputs (2)" in text
+# Derived from the artifact, not hardcoded: re-running discovery produces a
+# different but equally valid capability, and a literal count here would make this
+# check fail for a reason that has nothing to do with the CLI.
+_art = json.loads(pathlib.Path(ARTIFACT).read_text(encoding="utf-8"))
+for _label, _count in (
+    ("Steps", len(_art["steps"])),
+    ("Inputs", len(_art["inputs"])),
+    ("Outputs", len(_art["outputs"])),
+):
+    assert f"{_label} ({_count})" in text, f"summary should report {_label} ({_count})"
 assert "password" in text and "secret" in text, "a secret input is not flagged as one"
 assert "{{password}}" in text, "a step's templated value is not shown"
 

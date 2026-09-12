@@ -516,7 +516,12 @@ class BrowserSession:
             return f"{how}; filled {len(action['value'])} chars"
         if action_type == "select":
             chosen = locator.select_option(action["value"], timeout=DEFAULT_TIMEOUT_MS)
-            return f"{how}; selected {chosen}"
+            # Report the shape, not the content. A fill already logs "filled N
+            # chars" because the value may be a credential; a select value is no
+            # less sensitive -- an account number is exactly the regulated data
+            # this system is not supposed to persist -- and it was reaching the
+            # evidence logs verbatim while fills were being protected.
+            return f"{how}; selected {len(chosen)} option(s)"
         if action_type == "read":
             # `.value` for form controls, rendered text for everything else -- one
             # round-trip instead of branching on the element type from Python.

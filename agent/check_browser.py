@@ -150,7 +150,13 @@ with redirect_stdout(captured):
 
             branch = ref_for(result.observation, "combobox")
             result = session.act({"action": "select", "ref": branch, "value": "west"})
-            assert result.ok and "west" in result.detail, result.detail
+            # The selected value must NOT appear: a select carries data as
+            # sensitive as a fill -- an account number is precisely the regulated
+            # data this system must not persist -- so it reports its shape the way
+            # a fill reports "filled N chars".
+            assert result.ok, result.detail
+            assert "selected 1 option(s)" in result.detail, result.detail
+            assert "west" not in result.detail, f"the selected value leaked: {result.detail}"
 
             status = ref_for(result.observation, "paragraph")
             result = session.act({"action": "read", "ref": status})

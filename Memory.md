@@ -143,7 +143,21 @@ allowlist. Two things are waiting on a decision:
 
 ## Known issues, not yet fixed
 
-- **A parameter value can reach a saved artifact through a step description.** Schema rule 7 keeps
+- ~~A parameter value can reach a saved artifact through a step description~~ — **fixed.**
+  `_generalise_text` now rewrites supplied values into `{{param}}` templates in the model's
+  rationale (which becomes `Step.description`) and in output descriptions, at capture time where
+  the value-to-name map exists. Verified: no supplied value appears anywhere in the artifact.
+  A related leak was found and fixed alongside it: `select` logged its chosen value verbatim
+  (`selected ['800002']`) while `fill` had always logged `filled N chars`. A select value is no
+  less sensitive, and `check_browser` had been *asserting* the leaking behaviour; that assertion
+  is now a guard against it.
+
+  Still true, and a different category: page content the system OBSERVES is captured in logs as
+  evidence, so an account number the bank's own screen displays appears in `observed`. That is
+  what redaction is for, and its keyword-anchored gaps still apply to bare 6-digit numbers.
+
+  Original note follows.
+- ~~superseded~~ A parameter value can reach a saved artifact through a step description. Schema rule 7 keeps
   values out of `Step.value`, but nothing sanitises `Step.description`, which is the model's own
   rationale text. The current artifact contains `800002` there:
   `"Select the account number 800002 from the dropdown..."`. Here it is only an account number on

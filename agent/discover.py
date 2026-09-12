@@ -440,6 +440,28 @@ def _retarget_label_read(observation, node, read_text, session, step_index, logg
     return None
 
 
+def _generalise_text(text: str, by_value: dict[str, str]) -> str:
+    """Replace any supplied input value appearing in free text with its template.
+
+    Schema rule 7 keeps values out of ``Step.value``, but a step also carries
+    prose: the model's own rationale becomes ``Step.description``, and a model
+    asked to select account 800002 says so in words. That prose is saved into
+    the artifact, so without this the artifact hardcodes the value that rule 7
+    exists to keep out of it -- and for a secret param it would persist a
+    credential in a file meant to be reviewable and shareable.
+
+    Matching is whole-token, like ``_param_for``, so a value does not corrupt a
+    longer string that merely contains it.
+    """
+    if not text:
+        return text
+    for value, name in by_value.items():
+        if not value:
+            continue
+        text = re.sub(rf"(?<![\w-]){re.escape(value)}(?![\w-])", f"{{{{{name}}}}}", text)
+    return text
+
+
 def _loggable(action: dict) -> dict:
     """An action safe to write to a log: its value replaced by a description.
 
@@ -717,7 +739,10 @@ def discover(
         transcript.append({
             "index": step_index,
             "action": action,
-            "rationale": decision.rationale,
+            # The model's prose is saved as Step.description, so any value it
+            # mentions must be generalised here too -- not just the one in
+            # action["value"].
+            "rationale": _generalise_text(decision.rationale, by_value),
             "node": node,
             "name_nth": name_nth,
             "role_nth": role_nth,
@@ -752,12 +777,13 @@ def discover(
             outputs_read.append({
                 "name": name,
                 "type": "string",
-                "description": (
+                "description": _generalise_text(
                     f"Read at step {step_index} from the "
                     f"{node.get('role') or 'node'} labelled "
                     f"{(node.get('name') or '').strip() or '(unnamed)'!r}. Kept as a string: "
                     f"the artifact returns what the screen said, and interpreting it is the "
-                    f"caller's decision."
+                    f"caller's decision.",
+                    by_value,
                 ),
                 "from_step": step_index,
             })
