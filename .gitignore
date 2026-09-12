@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 .DS_Store
 .env
+
+# interface.ai's own take-home brief: kept locally, never published.
+Assignment A*.pdf
