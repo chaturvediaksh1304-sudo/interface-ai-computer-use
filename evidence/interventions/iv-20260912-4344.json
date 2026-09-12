@@ -1,6 +1,6 @@
 {
-  "request_id": "iv-20260911-4344",
-  "raised_at": "2026-09-11T23:56:04.386903+00:00",
+  "request_id": "iv-20260912-4344",
+  "raised_at": "2026-09-12T00:29:56.909683+00:00",
   "goal": "Read the account balance for the given account number.",
   "capability_id": "altoro.account_balance",
   "step_index": 1,
@@ -8,6 +8,6 @@
   "url": "http://demo.testfire.net/login.jsp",
   "page_title": "Altoro Mutual",
   "observation_digest": "Sign In | Contact Us | Feedback | Search ONLINE BANKING LOGIN PERSONAL SMALL BUSINESS INSIDE ALTORO MUTUAL PERSONAL Deposit Product Checking Loan Products Cards Investments & Insurance Other Services SMALL BUSINESS Deposit Products Lending Services Cards Insurance Retirement Other Services INSIDE ALTORO MUTUAL About Us Contact Us Locations Investor Relations Press Room Careers Subscribe Online Ban",
-  "screenshot": "evidence/interventions/iv-20260911-4344.png",
+  "screenshot": "evidence/interventions/iv-20260912-4344.png",
   "param_names": []
 }

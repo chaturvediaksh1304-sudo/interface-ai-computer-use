@@ -27,6 +27,7 @@ that cannot be fixed after the fact -- a secret written to evidence is written.
 """
 
 import json
+import tempfile
 from pathlib import Path
 
 from agent.browser import ActResult, Observation
@@ -43,7 +44,11 @@ from guardrails.allowlist import AllowlistViolation, load_allowlist
 from guardrails.logging_setup import setup_logging
 
 RUN_ID = "phase6-escalation-selfcheck"
-EVIDENCE = Path("evidence")
+# A temporary directory, not the repo's evidence/. This check writes an
+# intervention request and a stub screenshot, and neither belongs in the
+# evidence package a reviewer reads -- a 40-byte file that is not really a PNG
+# sitting beside the genuine ones is worse than no example at all.
+EVIDENCE = Path(tempfile.mkdtemp(prefix="check_intervention_")) / "evidence"
 LOG_PATH = EVIDENCE / f"{RUN_ID}.jsonl"
 
 # A value with no shape any redaction pattern could recognise -- which is the whole point.

@@ -143,6 +143,25 @@ allowlist. Two things are waiting on a decision:
 
 ## Known issues, not yet fixed
 
+- **A parameter value can reach a saved artifact through a step description.** Schema rule 7 keeps
+  values out of `Step.value`, but nothing sanitises `Step.description`, which is the model's own
+  rationale text. The current artifact contains `800002` there:
+  `"Select the account number 800002 from the dropdown..."`. Here it is only an account number on
+  a public demo, but the same path would bake a *secret* param's value into an artifact, which is
+  exactly what rule 7 exists to prevent. The fix is to apply the template substitution (or a
+  redaction pass) to descriptions as well as values.
+- **A real business outcome is being reported as breakage.** The error-case page says
+  "Login Failed: We're sorry, but this username or password was not found in our system." That is
+  the UI giving a true domain answer, and `replay.outcomes.BUSINESS_SIGNALS` does not contain the
+  phrase, so it classifies HARD_FAILURE. Rules.md names this conflation as the worst failure mode
+  of the system, and it is currently live in the evidence. Replacing the placeholder signal list
+  with the sandbox's actual empty-state wording fixes it.
+- **Redaction corrupts a structured field named `secret`.** Logs contain
+  `"secret": "[REDACTED:SECRET]"` where the value is a boolean flag, not a credential: the
+  keyword-anchored rule matches on the key name. Harmless here, lossy in general.
+- **Bad credentials and the intermittent sandbox failure are indistinguishable** — both surface as
+  the same step-4 signature.
+
 - **`param_names` was empty in the live Phase 6 demo.** It is derived from the accessible names of
   the page's input controls, and this app's login inputs have none, so the console had no
   parameter names to render for that request. Harmless, but it means the field is only as good as
@@ -160,8 +179,10 @@ allowlist. Two things are waiting on a decision:
   that left the page where it was, the engine re-runs that click once and retries the step,
   counted against the taxonomy's existing retry ledger so it cannot loop. It is proven by
   `replay.check_engine` check (i) against a session whose clicks only land when repeated.
-  **It has not yet been seen to fire against the live site** — six consecutive live runs all
-  passed without the flaky condition occurring, so there is no live evidence either way.
+  **Correction:** it HAS since been observed firing live. `evidence/replay-error-case.jsonl`
+  contains `replay.renavigating` with reason "step 3 clicked but the page did not move"; the
+  engine re-clicked Login, the page still did not move, and it then hard-failed honestly. An
+  earlier note here said the opposite, written before that evidence existed.
 - **Duplicate outputs.** In the current artifact `cell` and `available_balance` both resolve to
   the same cell (`nth=13`), because the model read it once directly and once via a label the
   retargeting then followed to the same place. Harmless but untidy; the compiler does not
