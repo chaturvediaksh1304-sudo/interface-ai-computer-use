@@ -44,7 +44,7 @@ listed under Known issues.
 - **Accessibility tree, not DOM selectors or screenshot coordinates.** It is the one mechanism that
   still works when the surface has no clean DOM — the brief's stated common case — and the same
   concept exists on desktop.
-- **`aria_snapshot(mode="ai")`, not `page.accessibility.snapshot()`.** The API `Architecture.md`
+- **`aria_snapshot(mode="ai")`, not `page.accessibility.snapshot()`.** The API `PRD_files/Architecture.md`
   names does not exist in Playwright 1.62. The architectural bet survived; the specific call did not.
 - **Refs are discarded at compile time.** Accessibility refs do not survive a document change, so an
   artifact storing them cannot replay. `_locator_for` emits a durable role/name ladder instead.
@@ -83,7 +83,9 @@ listed under Known issues.
   shell path.
 - **`REPORT-long.md` was created and then deleted.** It predated the business-signal and
   description-leak fixes and so contained claims that had become false; shipping it beside a correct
-  short report would have been worse than not shipping it. Full text remains in history at `a92e3ee`.
+  short report would have been worse than not shipping it. Full text remains in history at `397b148` (6,281 words). Note that hashes predating the
+  `filter-branch` that purged the assignment PDF are gone — `a92e3ee`, cited in an earlier
+  commit message, is one of them.
 
 ## Known issues, not yet fixed
 
