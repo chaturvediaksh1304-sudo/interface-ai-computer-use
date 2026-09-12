@@ -2,234 +2,133 @@
 
 Live state of the project. Updated after every phase.
 
-**Last updated:** 2026-09-11 — Phase 6 complete. Phases 1-6 all meet their done-criteria; only
-Phase 7 (docs + final evidence package) remains. A live LLM-driven discovery run produces
-an artifact that replays deterministically three times running, with no model in the replay path.
-Phases 1-2 committed (`2773bca`, `2462511`); Phases 3-4 are **uncommitted**. No remote exists.
+**Last updated:** 2026-09-11 — **All seven phases complete and submitted-ready.** 19 commits,
+pushed to https://github.com/chaturvediaksh1304-sudo/interface-ai-computer-use (public). Working
+tree clean, `main` tracking `origin/main`, 11/11 self-checks passing.
 
 ---
 
 ## Done
 
-**Phase 1 — Setup + guardrail scaffolding.** Both done-criteria met and independently
-re-verified from a clean shell (not taken on the subagents' word).
+All seven phases meet the done-criteria in `PRD_files/Phases.md`, each verified rather than
+asserted.
 
-- Repo skeleton per Architecture.md: `agent/ artifact/ replay/ guardrails/ evidence/ artifacts/`,
-  plus `requirements.txt`, `.gitignore`, and a `.venv`. `git init` run; **nothing committed yet**.
-- `guardrails/allowlist.py` + `allowlist.json` — deny-by-default allowlist over domains,
-  URL schemes, path globs, and action types. Raises `AllowlistViolation`; never returns a
-  boolean a caller could ignore.
-- `guardrails/redaction.py` — `redact(str)` and `redact_obj(obj)`. Seven classes of
-  secret/PII, replaced with kind-preserving markers (`[REDACTED:SSN]`) so logs stay debuggable.
-- `guardrails/logging_setup.py` — `setup_logging(run_id)`, JSON-lines to stdout and to
-  `evidence/<run_id>.jsonl`, with redaction applied as a logging **Filter** on the logger.
-- Three runnable self-checks: `python3 -m guardrails.check_{allowlist,redaction,logging}`.
-- Integration manual test: allowlist decisions logged through the redacting logger,
-  evidence at `evidence/phase1-manual-test.jsonl`, grep confirms zero raw secrets on disk.
+| Phase | Deliverable | Verification |
+|---|---|---|
+| 1 | Guardrail scaffolding — allowlist, redaction, structured logging | allowlist blocks an out-of-scope domain and action; redaction strips SSN/email/card/token from a log line |
+| 2 | `CapabilityArtifact` schema, 7 validation rules | 4 lossless round-trips, byte-identical re-serialisation, 24 rejection cases |
+| 3 | LLM-driven discovery loop and artifact compiler | a real run against the live sandbox compiled a schema-valid artifact |
+| 4 | Deterministic replay + three-outcome taxonomy | replay returns declared outputs; three consecutive runs identical; both error shapes classified |
+| 5 | Evidence and observability | structured logs for every run, screenshot on failure |
+| 6 | Human escalation and handoff | intervention raised with full context; operator acted on the *same* live session; control returned |
+| 7 | `cli.py`, `README.md`, `REPORT.md`, evidence package | documented commands run clean; REPORT carries the seven mandated headings |
 
-**Phase 2 — Artifact schema.** Both done-criteria met, verified independently rather than on
-the subagents' word.
+**The shipped capability** is `artifacts/altoro.account_balance.v1.json` — 8 steps, 3 inputs
+(`password` secret, `username`, `account_number`), 1 output, checkpoint `a11y_node_present`.
+Discovered by a live LLM-driven run against `demo.testfire.net`, replays deterministically with no
+model in the path.
 
-- `artifact/schema.py` — Pydantic v2 models: `A11yLocator`, `Locator`, `InputParam`,
-  `OutputField`, `Step`, `Checkpoint`, `CapabilityArtifact`, plus `save_artifact` /
-  `load_artifact`. Seven validation rules enforced (see decisions below).
-- `artifacts/example_member_lookup.v1.json` — hand-written 8-step search → detail → read
-  capability, 2 inputs, 2 outputs, accessibility-tree-first locators with css fallbacks.
-- `artifact/check_schema.py` — 4 lossless round-trips with byte-identical re-serialization,
-  the example artifact validating clean, and 24 rejection cases across all 7 rules.
-- Mutation-tested: neutering rules 1, 2, 3 and 6 in turn each made the check fail, so it has
-  teeth. `schema.py` restored byte-identical afterwards.
-
-**Phase 3 — Discovery loop.** Built: `agent/browser.py` (a11y observe + act), `agent/decide.py`
-(the LLM call), `agent/discover.py` (loop + artifact compiler), `agent/llm.py` (backend adapter).
-A genuine LLM-driven run against the live sandbox completed the goal end-to-end — logged in,
-selected an account, read the balance — and compiled into a schema-valid artifact at
-`artifacts/altoro.account_balance.v1.json`. Both stated done-criteria are literally met.
-
-**Phase 4 — Replay + error taxonomy.** Built: `replay/outcomes.py`, `replay/engine.py`. Both
-done-criteria pass against the Phase 2 example artifact: clean 8-step replay returning two
-typed outputs, identical on re-run, bad input classified as a business outcome rather than a
-crash, fallback recovery reported, exhausted fallbacks hard-failing with a screenshot on disk.
-
-**Phase 5 — Evidence/logging.** Verified rather than newly built: discovery and replay runs each
-produce a complete structured log under `/evidence/` (66/57/40 well-formed records, none
-unparseable), and the error-case replay's result record points at a real screenshot.
-
-**Phase 6 — Human escalation and handoff.** `escalation/intervention.py` raises an
-`InterventionRequest` carrying goal, step, state and reason plus a screenshot, and
-`apply_operator_commands` runs a human's commands through the *same* live `BrowserSession`.
-`operator/console.html` is the mock operator surface. Demonstrated live against the sandbox: the
-agent stopped for want of credentials, a human signed in through the held session, and automation
-resumed on the page the human left it on (`login.jsp` -> `/bank/main.jsp`, same session object).
+**Entry points:** `cli.py discover`, `cli.py replay`, `cli.py handoff-demo`. Exit codes carry the
+outcome — 0 success, 1 a modelled failure, 2 misuse.
 
 ## In progress
 
-Nothing in flight. Phases 3 and 4 both meet their stated done-criteria:
-
-- A genuine LLM-driven run (local qwen2.5:14b via Ollama) signs in to the live sandbox, selects
-  an account, reads the balance, and compiles to a schema-valid artifact.
-- That artifact replays with no LLM anywhere, returning its declared outputs, and gave an
-  identical result on three consecutive runs.
-- A deliberately bad input is classified as a HARD_FAILURE at step 5 with expected/observed and
-  a screenshot at `evidence/replay_altoro.png` — a structured result, not a crash.
+Nothing. The project is complete against the brief and pushed. Remaining work is optional polish,
+listed under Known issues.
 
 ## Key decisions + why
 
-- **Phase 1 is stdlib-only.** Allowlist, redaction and logging need nothing beyond `re`,
-  `json`, `logging`, `fnmatch`, `urllib.parse`. Playwright/Pydantic/Anthropic are listed in
-  `requirements.txt` but deliberately not installed until the phase that first needs them.
-- **Allowlist config is JSON, not YAML.** PyYAML is not in Rules.md's approved library list
-  and adding it would have required explicit approval for no real gain.
-- **Redaction runs as a logging Filter, not a Formatter.** A Filter sits on the logger and
-  fires once per record, so every sink is covered by one pass. A Formatter has to be attached
-  to each handler individually — add a third sink later, forget it once, and you leak.
-- **Subdomain matching is an explicit config flag, default off, and matches on a leading dot.**
-  `host == d or host.endswith("." + d)`. This is what stops `evil-example.com` from matching
-  an `example.com` entry; the naive `endswith` version is a real vulnerability and the
-  self-check was mutation-tested against exactly that mistake.
-- **URL scheme is checked, though the brief didn't ask.** Without it `file://` and
-  `javascript:` slip past a host-only check. Cheap, and it is a trust boundary.
-- **Card detection is Luhn-gated.** It is what separates a real PAN from any other long
-  digit run (step ids, timestamps) and keeps the logs from being shredded by false positives.
-- **Redaction is keyword-anchored for account numbers and phone numbers.** A bare 6–19 digit
-  pattern would eat every timestamp, elapsed_ms and artifact id in the logs. Deliberate
-  false-negative tradeoff — see Open items.
-- **Work split across subagents by module boundary** per Rules.md, with the import contract
-  fixed in advance so parallel agents couldn't collide on the same file — `logging_setup →
-  redaction` in Phase 1, and the full model contract in Phase 2. Zero contract mismatches in
-  both phases.
-- **`extra="forbid"` on every artifact model.** Pydantic's default silently drops unknown
-  keys, which is precisely the data loss the "no data loss" criterion exists to catch.
-- **One artifact-level checkpoint, no per-step expectations.** PRD says "checkpoint/success
-  condition" singular. Per-step assertions would help determinism but belong to Phase 4's
-  error taxonomy; adding them now would be guessing. Expect a `schema_version` bump if Phase 4
-  wants them.
-- **Step values carry `{{param}}` templates, never literal input values, and a secret param
-  may appear only as a bare `{{name}}`** — never composed into a larger string. This makes it
-  structurally impossible to bake a secret into a saved artifact, rather than relying on
-  redaction to catch it after the fact.
-- **Unknown `schema_version` is rejected loudly with no migration machinery.** Migrations are
-  for when a second version exists.
-- **Pydantic install was approved explicitly** as a one-off PyPI fetch. Playwright and the
-  Anthropic SDK are still uninstalled and need separate approval.
+- **Two halves sharing only a data format.** Discovery is expensive and non-deterministic; replay
+  costs nothing per invocation and touches no model. The artifact is the entire contract between
+  them.
+- **Accessibility tree, not DOM selectors or screenshot coordinates.** It is the one mechanism that
+  still works when the surface has no clean DOM — the brief's stated common case — and the same
+  concept exists on desktop.
+- **`aria_snapshot(mode="ai")`, not `page.accessibility.snapshot()`.** The API `Architecture.md`
+  names does not exist in Playwright 1.62. The architectural bet survived; the specific call did not.
+- **Refs are discarded at compile time.** Accessibility refs do not survive a document change, so an
+  artifact storing them cannot replay. `_locator_for` emits a durable role/name ladder instead.
+- **A value becomes a `{{param}}` only when the caller supplied it**, never by guessing from the
+  value's shape — otherwise the compiler invents parameters nobody asked for.
+- **Secrets are structurally excluded, not filtered.** Rule 7 requires a secret to appear only as a
+  bare `{{name}}`, so baking one into an artifact is impossible rather than something redaction has
+  to catch afterwards. `_generalise_text` extends the same protection to the model's prose.
+- **The primary locator gets a longer timeout than any fallback** (10s vs 2s), and bare positional
+  fallbacks are removed from state-changing actions. Both exist because a wrong answer that looks
+  like success is worse than an honest failure.
+- **Signals are split by what they license.** An empty-result phrase explains a failed checkpoint; a
+  blocking phrase ("login failed") also explains a missing element. Neither counts when the page was
+  never dependably read.
+- **Escalation reuses the live session object.** `escalation/intervention.py` contains no
+  `BrowserSession(` — handing back a different session would be a restart, not a handoff. The human
+  is not exempt from the allowlist, and a refused command is recorded while the handoff continues.
+- **Redaction runs as a logging `Filter`, not a `Formatter`**, so every sink is covered by one pass
+  and a future sink cannot leak by omission.
+- **Work was split across subagents by module boundary** per `PRD_files/Rules.md`, with the import
+  contract fixed in advance each time so parallel agents could not collide. Zero contract mismatches
+  across all seven phases.
 
 ## Deviations from plan
 
-- **Repo root directory name has a trailing space** (`interface.ai `). Not a choice — it is
-  how the folder already exists on disk. Every shell path must stay quoted.
-- Planning docs live in `PRD_files/`, not at the repo root as the docs' own examples imply.
-- No deviation from Phases.md scope through Phase 2: no Playwright, no Anthropic SDK, no agent
-  loop, no replay engine.
-- **Standing user constraint, added after Phase 1:** no browser, no Playwright, no live network
-  request against the sandbox target, and no git operation touching a remote — each requires
-  explicit go-ahead, every time, even mid-phase. Local edits, local test runs and local commits
-  are fine. This gates Phase 3 and Phase 6, both of which need a live browser.
-- The example artifact's element names and css fallbacks are plausible but **not verified
-  against the live sandbox** — the site was never visited, per the constraint above. Phase 3's
-  real discovery run produces the authoritative artifact.
-
-## Open items needing human sign-off
-
-Rules.md requires explicit approval before changing redaction behaviour or widening the
-allowlist. Two things are waiting on a decision:
-
-1. **Known redaction gaps**, accepted for now: bare account numbers with no nearby keyword;
-   non-Luhn 13–19 digit runs; bare 10-digit phone numbers with no separators; non-US phone
-   formats; names, dates of birth and street addresses (not in scope as given); secret values
-   under unconventional key names (`"cred": ...`).
-2. **Allowlist target is seeded to `demo.testfire.net`** (Altoro Mutual, a public
-   IBM-maintained deliberately-vulnerable sandbox bank app, no login required) plus localhost.
-   If Phase 3 picks a different sandbox, widening the allowlist needs approval.
+- **The LLM backend is local Ollama (`qwen2.5:14b-instruct`), not Claude.** No `ANTHROPIC_API_KEY`
+  was available. The client is injected, so `build_client("auto")` prefers Anthropic the moment a
+  key exists; the loop, compiler, schema and replay are identical either way. Documented in REPORT §1.
+- **The allowlist was widened once**, from the paths guessed in Phase 2 to include `/doLogin`, after
+  the live run showed the real login POST target. Approved explicitly.
+- **Redaction was changed once**, to redact query-string values, after a GET form put filled values
+  into URLs that were being logged verbatim. Approved explicitly.
+- **The capability runs over plain HTTP** because `demo.testfire.net` presents a certificate that
+  expired in June 2026. The allowlist permits both schemes.
+- **Repo directory name carries a trailing space** (`interface.ai `). Not a choice — quote every
+  shell path.
+- **`REPORT-long.md` was created and then deleted.** It predated the business-signal and
+  description-leak fixes and so contained claims that had become false; shipping it beside a correct
+  short report would have been worse than not shipping it. Full text remains in history at `a92e3ee`.
 
 ## Known issues, not yet fixed
 
-- ~~A parameter value can reach a saved artifact through a step description~~ — **fixed.**
-  `_generalise_text` now rewrites supplied values into `{{param}}` templates in the model's
-  rationale (which becomes `Step.description`) and in output descriptions, at capture time where
-  the value-to-name map exists. Verified: no supplied value appears anywhere in the artifact.
-  A related leak was found and fixed alongside it: `select` logged its chosen value verbatim
-  (`selected ['800002']`) while `fill` had always logged `filled N chars`. A select value is no
-  less sensitive, and `check_browser` had been *asserting* the leaking behaviour; that assertion
-  is now a guard against it.
+All are stated openly in REPORT §7 rather than hidden.
 
-  Still true, and a different category: page content the system OBSERVES is captured in logs as
-  evidence, so an account number the bank's own screen displays appears in `observed`. That is
-  what redaction is for, and its keyword-anchored gaps still apply to bare 6-digit numbers.
-
-  Original note follows.
-- ~~superseded~~ A parameter value can reach a saved artifact through a step description. Schema rule 7 keeps
-  values out of `Step.value`, but nothing sanitises `Step.description`, which is the model's own
-  rationale text. The current artifact contains `800002` there:
-  `"Select the account number 800002 from the dropdown..."`. Here it is only an account number on
-  a public demo, but the same path would bake a *secret* param's value into an artifact, which is
-  exactly what rule 7 exists to prevent. The fix is to apply the template substitution (or a
-  redaction pass) to descriptions as well as values.
-- ~~A real business outcome reported as breakage~~ — **fixed.** Signals are now split by what
-  they license. `EMPTY_RESULT_SIGNALS` ("no results found") explain a checkpoint that did not
-  match and nothing else; `BLOCKING_SIGNALS` ("login failed", "account closed") also explain a
-  MISSING ELEMENT, because bad credentials mean the next step's button was never rendered and the
-  page says why. An empty-result phrase still cannot excuse a missing element — a search button
-  exists whether or not the last search found anything — and no phrase counts at all when the page
-  was never dependably read (timeout, unexplained state). Bad credentials now return
-  `business_outcome` naming the signal, and `evidence/replay-error-case.jsonl` shows it.
-
-  Two things worth keeping: the existing check caught an early version of this fix that wrongly
-  treated "your session has expired" as a domain answer — an expired session is our own plumbing
-  decaying, not the bank answering about the caller's input. And a **nonexistent account number**
-  is still a HARD_FAILURE (`evidence/replay-hard-failure.jsonl`), because the dropdown simply has
-  no such option and the page never says why; with no affirmative message we do not claim one.
-- **Redaction corrupts a structured field named `secret`.** Logs contain
-  `"secret": "[REDACTED:SECRET]"` where the value is a boolean flag, not a credential: the
-  keyword-anchored rule matches on the key name. Harmless here, lossy in general.
-- **Bad credentials and the intermittent sandbox failure are indistinguishable** — both surface as
-  the same step-4 signature.
-
-- **`param_names` was empty in the live Phase 6 demo.** It is derived from the accessible names of
-  the page's input controls, and this app's login inputs have none, so the console had no
-  parameter names to render for that request. Harmless, but it means the field is only as good as
-  the page's accessibility markup; deriving it from the artifact's declared inputs would be
-  sturdier when a capability is in play.
-
-- **Replay of this capability is intermittent, but it fails honestly.** Roughly one run in five
-  the sandbox does not complete the login click and the browser stays on `login.jsp`; the
-  account page never appears, so there is genuinely no GO button and replay returns a
-  HARD_FAILURE at step 4 with a screenshot. That is the correct classification for the state
-  the page is actually in, and it is environmental rather than a locator defect — but it does
-  mean the capability is not reliable end-to-end against this host.
-
-  A bounded recovery now exists for it: when a locator goes missing immediately after a click
-  that left the page where it was, the engine re-runs that click once and retries the step,
-  counted against the taxonomy's existing retry ledger so it cannot loop. It is proven by
-  `replay.check_engine` check (i) against a session whose clicks only land when repeated.
-  **Correction:** it HAS since been observed firing live. `evidence/replay-error-case.jsonl`
-  contains `replay.renavigating` with reason "step 3 clicked but the page did not move"; the
-  engine re-clicked Login, the page still did not move, and it then hard-failed honestly. An
-  earlier note here said the opposite, written before that evidence existed.
-- **Duplicate outputs.** In the current artifact `cell` and `available_balance` both resolve to
-  the same cell (`nth=13`), because the model read it once directly and once via a label the
-  retargeting then followed to the same place. Harmless but untidy; the compiler does not
-  notice two outputs pointing at one element.
-- `cell` is still a weak output name — it comes from a read that landed straight on a value
-  with no label to borrow a name from.
-- **`BUSINESS_SIGNALS` is still the 8 generic phrases** written before the real UI was known.
-  It should be replaced with Altoro's actual empty-state wording.
-- The example artifact from Phase 2 still describes a member-search flow that was guessed, not
-  observed. It validates and replays in tests, but it is not a real capability.
+- **`redact_obj` mangles a boolean field named `secret`** — `"secret": true` becomes
+  `"[REDACTED:SECRET]"`, because the rule matches on the key name. Harmless here, lossy in general.
+- **Replay against the public sandbox is intermittent** — roughly one run in five leaves the browser
+  on `login.jsp` because the login click does not navigate. A bounded re-navigation recovery exists
+  and has been observed firing; the one-in-five figure is anecdotal, not measured.
+- **`cell` is a poor output name**, inherited from a read that landed on a value with no nearby label
+  to borrow a name from. The compiler does not notice an output is unnamed in any useful sense.
+- **`param_names` is empty when a page's inputs have no accessible names** — deriving it from the
+  artifact's declared inputs rather than the page would be sturdier.
+- **Page content the system observes is captured in logs**, so an account number the bank's own
+  screen displays appears in `observed`. That is redaction's job, and its keyword-anchored gaps apply.
+- **`artifacts/example_member_lookup.v1.json` is a schema fixture, not a real capability** — written
+  before the sandbox was ever visited, under a constraint that forbade browsing.
 
 ## Next
 
-Phase 5 (evidence/logging) is largely satisfied already by work done in passing — structured
-logs exist for every discovery and replay run and a screenshot is captured on failure; it needs
-a review pass against its criteria rather than new building. Phase 6 (human escalation) is
-untouched, and `StuckError` already carries the goal/step/url/reason payload an intervention
-request needs.
+Nothing is required. If the project is picked up again, in order of value:
 
-Superseded plan — Phase 3 — Claude-driven discovery loop: observe (a11y tree) → decide → act (Playwright) against
-the sandbox, completing one real multi-step goal and compiling the transcript into a valid
-`CapabilityArtifact`. Done-criteria: one genuine LLM-driven run end-to-end against a live
-sandbox, and a transcript that compiles to a valid artifact.
+1. **Tune the signal lists against more of the real UI.** `BLOCKING_SIGNALS` and
+   `EMPTY_RESULT_SIGNALS` now carry the sandbox's actual wording, but only for the paths exercised
+   so far.
+2. **Derive `param_names` from the artifact's declared inputs** instead of the page's accessible
+   names.
+3. **Give the compiler a notion of output quality**, so a read landing on an unnamed value is
+   flagged at compile time rather than discovered by a caller.
+4. **Re-run discovery with Claude** once a key exists, to produce a second artifact alongside the
+   locally-discovered one and close the deviation in REPORT §1.
 
-**Phase 3 is blocked pending explicit approval** for three things the standing constraint
-covers: installing Playwright and the Anthropic SDK (PyPI fetch), downloading Playwright's
-browser binaries, and actually driving a browser against `demo.testfire.net`. It also needs an
-`ANTHROPIC_API_KEY`. Nothing about Phase 3 can proceed offline.
+## Working practices that paid off
+
+Recorded because they were load-bearing, not incidental.
+
+- **Verify, do not trust the report.** Several subagent claims were accurate; several were not. Every
+  done-criterion in this project was re-checked by running the thing.
+- **A mutation test that does not assert it mutated proves nothing.** Two early mutation tests were
+  silent no-ops read as findings. Always confirm the injection landed before trusting a green result.
+- **Read exit codes from the process, not through a pipe.** `cmd | tail; echo $?` reports `tail`'s
+  status and masked a genuinely failing check for two rounds.
+- **Regenerating evidence silently invalidates prose written against it.** README and REPORT both
+  drifted out of sync with the artifact after re-discovery; a scripted audit of every cited path and
+  number caught it.
+- **A check that asserts the buggy behaviour is worse than no check.** `check_browser` required a
+  select's chosen value to appear in the log — the exact leak that later needed fixing.
