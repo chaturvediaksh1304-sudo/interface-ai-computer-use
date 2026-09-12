@@ -133,26 +133,20 @@ answer.
 
 The interesting heterogeneity was not between tenants but inside one application: two pages of the
 same app address elements completely differently, and the ladder absorbed it without a per-site
-branch. A balance cell whose accessible name *is* its data has two defences in `agent/discover.py` —
-`_stable_part` keeps only the words before the first currency amount, date or long digit run, and
-`_name_is_unusable` rejects a name outright when nothing alphabetic survives, because a locator
-built from the value it reads cannot match once the value changes. `_retarget_label_read` handles
-the mirror case, a read landing on a label, by reading the adjacent value cell instead and actually
-performing that read. All fired in the live run.
+branch — positional locators where the markup offers no accessible name, role + name where it does,
+and in `agent/discover.py` two defences against a name that *is* the data it labels
+(`_stable_part`, `_name_is_unusable`) plus `_retarget_label_read` for a read that lands on a label.
+All fired in the live run.
 
-The seams that point at multi-tenant already exist: client and session are injected, the allowlist
-is per-instance config (`load_allowlist(path)`), artifacts are versioned data keyed by
-`capability_id` and `version`, format version is separate from capability version, and `replay` is
-pure over its inputs. A tenant would be a configuration record — allowlist file, credential source,
-backend choice, artifact namespace — all already constructor arguments, so a factory over existing
-seams rather than a rewrite, with artifacts moving to a store keyed `(tenant, capability_id,
-version)`.
-
-Two honest limits. Concurrency would be process-level, since Playwright's sync API binds a session
-to its thread. And desktop would reuse the `Observation`/action boundary, already expressed in roles
-and names that exist in AX and UIA — but **not** `_build_locator`, which maps each strategy onto a
-specific Playwright call. That function is the true width of the port, and calling the boundary
-platform-agnostic without saying so would be overselling it.
+The seams already exist: client and session are injected, the allowlist is per-instance config,
+artifacts are versioned data keyed by `capability_id` and `version`, and `replay` is pure over its
+inputs. A tenant would be a configuration record — allowlist file, credential source, backend
+choice, artifact namespace — all already constructor arguments, so a factory over existing seams
+rather than a rewrite. Two honest limits: concurrency would be process-level, since Playwright's
+sync API binds a session to its thread; and a desktop port would reuse the `Observation`/action
+boundary but **not** `_build_locator`, which maps each strategy onto a specific Playwright call.
+That function is the true width of the port, and calling the boundary platform-agnostic without
+saying so would be overselling it.
 
 ---
 
@@ -190,39 +184,30 @@ is real (request shape, command vocabulary, screenshot, allowlist band) and what
 ## 6. Safety
 
 **Allowlist.** Deny-by-default across scheme, host, path glob and action type, raising rather than
-returning a boolean a caller could ignore. Subdomain matching is an explicit flag, default off,
-matching on a leading dot — the naive `endswith` lets `evil-example.com` match an `example.com`
-entry, and the check was mutation-tested against exactly that mistake. Scheme is checked though the
-brief did not ask, because `file://` and `javascript:` slip past a host-only check. `_guard_route`
-filters what the *page* initiates, not only what this code initiates.
+returning a boolean a caller could ignore. Subdomain matching matches on a leading dot — the naive
+`endswith` lets `evil-example.com` match an `example.com` entry, and the check was mutation-tested
+against exactly that mistake. Scheme is checked though the brief did not ask, since `file://` and
+`javascript:` slip past a host-only check. `_guard_route` filters what the *page* initiates, not
+only what this code initiates — and that earned its keep live: the model clicked the site's search
+button, the navigation to `/search.jsp` was blocked, the tab parked on `chrome-error://`, and the
+loop recovered to the last good URL **and dropped the step that led there from the transcript**. The
+guardrail did not merely block a navigation; it kept a dead end out of a capability that would
+otherwise be replayed forever. It constrained the human too, refusing `www.chase.com` mid-handoff
+(§5).
 
-That last one earned its keep live: the model clicked the site's search button, the navigation to
-`/search.jsp` was blocked, the tab parked on `chrome-error://`, the loop recovered to the last good
-URL — **and dropped the step that led there from the transcript**. The guardrail did not merely
-block a navigation; it kept a dead end out of a capability that would otherwise be replayed forever.
-It constrained the human too, refusing `www.chase.com` mid-handoff (§5).
-
-**Redaction.** Seven classes of secret and PII, replaced with kind-preserving markers so logs stay
-debuggable. It runs as a logging `Filter`, not a `Formatter` — a filter fires once per record so
-every sink is covered, whereas a formatter must be attached per handler and one omission leaks. Card
-detection is Luhn-gated, separating a real PAN from any other long digit run.
-
-Four leaks were found and closed, all visible in the evidence. A GET form put filled values into the
-query string while URLs were logged verbatim (now `listAccounts=[REDACTED:QUERYVAL]` — parameter
-name visible, value not). The discovery loop logged whole action dicts, so a password reached an
-evidence file (now `_loggable` substitutes a length). A supplied value reached the *artifact*
-through `Step.description`, the model's own rationale — rule 7 guards `value`, nothing guarded
-prose, so `_generalise_text` now generalises descriptions too. And `select` logged its chosen value
-verbatim while `fill` had always logged a length — found because the browser check had been
-*asserting* that leak.
+**Redaction** covers seven classes of secret and PII with kind-preserving markers, and runs as a
+logging `Filter` rather than a `Formatter`: a filter fires once per record so every sink is covered,
+whereas a formatter must be attached per handler and one omission leaks. Four leaks were found and
+closed — filled values reaching the query string of logged URLs; whole action dicts logged, carrying
+a password into an evidence file; a supplied value reaching the *artifact* through
+`Step.description`, which rule 7 does not cover; and `select` logging its chosen value where `fill`
+had always logged a length, found because the browser check had been *asserting* the leak.
 
 **Still open.** `redact_obj` redacts any value under a secret-looking key wholesale, right for
-`"password": "hunter2"` and wrong for `"secret": true`. Account and phone patterns are
-keyword-anchored on purpose, so a bare account number with no nearby keyword passes through; the
-alternative would eat every timestamp and artifact id in the logs, so it is a deliberate
-false-negative trade. Page content the system *observes* is still captured as evidence, so an
-account number the bank's own screen displays appears in `observed`. And the capability runs over
-plain HTTP because the sandbox's certificate is expired under this clock — acceptable for a public
+`"password": "hunter2"` and wrong for `"secret": true`. Account patterns are keyword-anchored, so a
+bare account number passes through — the alternative would eat every timestamp in the logs — and
+page content the system *observes* is captured as evidence regardless. The capability runs over
+plain HTTP because the sandbox's certificate is expired under this clock: acceptable for a public
 sandbox with a throwaway login, not against a real back office.
 
 ---
